@@ -17,6 +17,10 @@ from ui.components.worklist_view import WorklistView
 from ui.components.model_runner import ModelRunnerPanel
 from ui.components.db_import import DatabaseImportPanel
 from ui.components.plasmid_view import PlasmidView
+from ui.components.model_repository import ModelRepositoryPanel
+from ui.components.plasmid_assembly import PlasmidAssemblyPanel
+from ui.components.generate_sequences import GenerateSequencesPanel
+from ui.components.analysis_settings import AnalysisSettingsPanel
 
 
 # ── Design tokens ─────────────────────────────────────────────────────────────
@@ -123,8 +127,8 @@ pn.extension(
 
 
 # ── Tab names & index ─────────────────────────────────────────────────────────
-_TAB_NAMES  = ["Worklist", "Parts Workshop"]
-_TAB_KEYS   = ["worklist", "parts"]
+_TAB_NAMES  = ["Worklist", "Parts Workshop", "Assemble Plasmid", "Generate Sequences"]
+_TAB_KEYS   = ["worklist", "parts", "assemble", "generate"]
 
 
 class StudioApp(param.Parameterized):
@@ -140,6 +144,10 @@ class StudioApp(param.Parameterized):
         self._models        = ModelRunnerPanel(self.state)
         self._db_import     = DatabaseImportPanel(self.state)
         self._parts         = PlasmidView(self.state)
+        self._model_repo    = ModelRepositoryPanel(self.state)
+        self._assembly      = PlasmidAssemblyPanel(self.state)
+        self._generate      = GenerateSequencesPanel(self.state)
+        self._analysis_settings = AnalysisSettingsPanel(self.state)
 
     # ── Sequence Inspection Modal ─────────────────────────────────────────────
 
@@ -186,7 +194,6 @@ class StudioApp(param.Parameterized):
         if not self.state.show_db_import_modal:
             return pn.Column(visible=False)
 
-        # Close button
         close_btn = pn.widgets.Button(
             name="✕ Close",
             button_type="primary",
@@ -198,10 +205,71 @@ class StudioApp(param.Parameterized):
 
         close_btn.on_click(close_modal)
 
-        # Modal content using Card
         modal = pn.Card(
             pn.panel(self._db_import.panel),
             title="Import Database",
+            header=close_btn,
+            collapsed=False,
+            collapsible=False,
+            sizing_mode="stretch_width",
+            width=900,
+            styles={"background": "white"},
+        )
+
+        return modal
+
+    # ── Model Repository Modal ────────────────────────────────────────────────
+
+    @param.depends("state.show_model_repo_modal")
+    def _model_repo_modal(self) -> pn.viewable.Viewable:
+        if not self.state.show_model_repo_modal:
+            return pn.Column(visible=False)
+
+        close_btn = pn.widgets.Button(
+            name="✕ Close",
+            button_type="primary",
+            width=100,
+        )
+
+        def close_modal(event: object) -> None:
+            self.state.show_model_repo_modal = False
+
+        close_btn.on_click(close_modal)
+
+        modal = pn.Card(
+            self._model_repo.panel(),
+            title="Model Repository",
+            header=close_btn,
+            collapsed=False,
+            collapsible=False,
+            sizing_mode="stretch_width",
+            width=1000,
+            styles={"background": "white"},
+        )
+
+        return modal
+
+    # ── Analysis Settings Modal ───────────────────────────────────────────────
+
+    @param.depends("state.show_analysis_settings_modal")
+    def _analysis_settings_modal(self) -> pn.viewable.Viewable:
+        if not self.state.show_analysis_settings_modal:
+            return pn.Column(visible=False)
+
+        close_btn = pn.widgets.Button(
+            name="✕ Close",
+            button_type="primary",
+            width=100,
+        )
+
+        def close_modal(event: object) -> None:
+            self.state.show_analysis_settings_modal = False
+
+        close_btn.on_click(close_modal)
+
+        modal = pn.Card(
+            self._analysis_settings.panel(),
+            title="Analysis Settings",
             header=close_btn,
             collapsed=False,
             collapsible=False,
@@ -239,9 +307,13 @@ class StudioApp(param.Parameterized):
                 pn.panel(self._worklist.panel),
                 pn.panel(self._sequence_modal),
                 pn.panel(self._db_import_modal),
+                pn.panel(self._model_repo_modal),
+                pn.panel(self._analysis_settings_modal),
                 sizing_mode="stretch_width",
             )),
             (_TAB_NAMES[1], pn.panel(self._parts.panel)),
+            (_TAB_NAMES[2], pn.panel(self._assembly.panel)),
+            (_TAB_NAMES[3], pn.panel(self._generate.panel)),
             active=active_idx,
             sizing_mode="stretch_width",
         )

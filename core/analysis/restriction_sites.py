@@ -18,6 +18,7 @@ COMMON_ENZYMES: Dict[str, str] = {
     "BbsI":   "GAAGAC",
     "Esp3I":  "CGTCTC",
     "SapI":   "GCTCTTC",
+    "BsmBI":  "CGTCTC",
     # Classic cloning
     "EcoRI":  "GAATTC",
     "HindIII":"AAGCTT",
@@ -34,8 +35,22 @@ COMMON_ENZYMES: Dict[str, str] = {
     "SmaI":   "CCCGGG",
     "SacI":   "GAGCTC",
     "ClaI":   "ATCGAT",
-    # Assembly / Gibson-related
+    # Blunt cutters
+    "EcoRV":  "GATATC",
+    "HpaI":   "GTTAAC",
+    "StuI":   "AGGCCT",
+    "ScaI":   "AGTACT",
+    # Methylation-sensitive
     "DpnI":   "GATC",
+    "MboI":   "GATC",
+    "Sau3AI": "GATC",
+    # Rare cutters (8+ bp)
+    "SfiI":   "GGCCNNNNNGGCC",
+    "PacI":   "TTAATTAA",
+    "AscI":   "GGCGCGCC",
+    "FseI":   "GGCCGGCC",
+    "SwaI":   "ATTTAAAT",
+    "PmeI":   "GTTTAAAC",
 }
 
 # IUPAC ambiguity → regex character class

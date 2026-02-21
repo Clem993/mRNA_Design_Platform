@@ -282,8 +282,10 @@ class APIGenerativeModel(GenerativeModel):
 class RegisteredModel:
     model: ModelType
     model_type: str       # "scoring" | "generative"
-    source: str           # "local" | "api"
+    source: str           # "local" | "api" | "builtin" | "catalog"
     source_path: str = "" # file path or endpoint URL
+    repository: str = ""  # display provenance (e.g. "github.com/ViennaRNA")
+    category: str = ""    # model category for display
 
 
 class ModelRegistry:

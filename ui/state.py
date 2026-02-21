@@ -75,12 +75,25 @@ class AppState(param.Parameterized):
         default=[], doc="Reusable sequence parts (UTRs, CDS, Kozak, PolyA)"
     )
 
+    # ── Multi-worklist management ────────────────────────────────────────────
+    worklists: List[Worklist] = param.List(default=[], doc="All worklists")
+    active_worklist_index: int = param.Integer(default=0, doc="Index of active worklist")
+
+    # ── Analysis settings ─────────────────────────────────────────────────────
+    analysis_settings: Dict[str, Any] = param.Dict(default={}, doc="Configurable analysis settings")
+
+    # ── Generation settings ───────────────────────────────────────────────────
+    generation_settings: Dict[str, Any] = param.Dict(default={}, doc="Sequence generation settings")
+
     # ── UI state ─────────────────────────────────────────────────────────────
     active_tab: str = param.String(default="worklist", doc="Active main panel tab")
     status_message: str = param.String(default="", doc="Status bar message")
     is_loading: bool = param.Boolean(default=False, doc="Global loading indicator")
     show_sequence_modal: bool = param.Boolean(default=False, doc="Show sequence inspection modal")
     show_db_import_modal: bool = param.Boolean(default=False, doc="Show database import modal")
+    show_model_repo_modal: bool = param.Boolean(default=False, doc="Show model repository modal")
+    show_analysis_settings_modal: bool = param.Boolean(default=False, doc="Show analysis settings modal")
+    show_backbone_import_modal: bool = param.Boolean(default=False, doc="Show backbone import modal")
 
     def __init__(self, **params: Any) -> None:
         if "worklist" not in params:

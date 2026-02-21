@@ -3,12 +3,12 @@ Worklist panel.
 
 Displays the worklist as a sortable table with scoring results.
 Users can add sequences from the registry, remove items, run analysis,
-and export the worklist as CSV.
+select rows to create new worklists, and export as CSV.
 """
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 import pandas as pd
 import panel as pn
@@ -26,6 +26,8 @@ class WorklistView(param.Parameterized):
     def __init__(self, state: "AppState", **params: object) -> None:
         super().__init__(**params)
         self._state = state
+        self._table_widget = None
+        self._create_wl_section = pn.Column(visible=False, sizing_mode="stretch_width")
 
     def _to_dataframe(self) -> pd.DataFrame:
         wl = self._state.worklist
@@ -100,27 +102,85 @@ class WorklistView(param.Parameterized):
         )
         run_analysis_btn.on_click(lambda event: self._run_selected_analysis(analysis_select.value))
 
+        # Analysis settings gear button
+        settings_btn = pn.widgets.Button(
+            name="⚙",
+            button_type="light",
+            width=40,
+            margin=(4, 0),
+            stylesheets=["""
+                :host .bk-btn {
+                    font-size: 16px;
+                    padding: 4px;
+                    border-radius: 4px;
+                }
+            """],
+        )
+        settings_btn.on_click(lambda e: setattr(self._state, "show_analysis_settings_modal", True))
+
+        # Create worklist from selection button
+        create_wl_btn = pn.widgets.Button(
+            name="Create Worklist from Selection",
+            button_type="light",
+            width=220,
+            margin=(4, 4),
+            stylesheets=["""
+                :host .bk-btn {
+                    font-size: 11px;
+                    color: #6366F1;
+                    border: 1px solid #6366F1;
+                    border-radius: 4px;
+                }
+                :host .bk-btn:hover {
+                    background: #EEF2FF;
+                }
+            """],
+        )
+
         toolbar = pn.Row(
             pn.pane.HTML(
                 f'<div style="font-size:16px;font-weight:800;padding:8px 0;">'
                 f'{wl.name} <span style="color:#7F8C8D;font-size:13px;">({wl.count} items)</span></div>'
             ),
             pn.layout.HSpacer(),
+            create_wl_btn,
             analysis_select,
             run_analysis_btn,
+            settings_btn,
             export_btn,
             sizing_mode="stretch_width",
         )
+
+        # Create worklist inline form
+        self._create_wl_section = pn.Column(visible=False, sizing_mode="stretch_width")
+        wl_name_input = pn.widgets.TextInput(
+            name="New Worklist Name",
+            value=f"Selection from {wl.name}",
+            width=300,
+            margin=(4, 4),
+        )
+        create_confirm_btn = pn.widgets.Button(name="Create", button_type="success", width=80, margin=(4, 4))
+        create_cancel_btn = pn.widgets.Button(name="Cancel", button_type="light", width=80, margin=(4, 4))
+
+        self._create_wl_section.extend([
+            pn.Row(
+                wl_name_input,
+                create_confirm_btn,
+                create_cancel_btn,
+                sizing_mode="stretch_width",
+                styles={"background": "#EEF2FF", "padding": "8px", "border-radius": "6px", "margin": "4px 0"},
+            ),
+        ])
 
         if wl.count == 0:
             table_or_empty: pn.viewable.Viewable = pn.pane.HTML(
                 '<div style="color:#7F8C8D;padding:30px;text-align:center;">'
                 'Worklist is empty. Import sequences from a database to get started.</div>'
             )
+            create_wl_btn.visible = False
         else:
-            # Create table with row click handler (no editing)
-            # Dynamic height based on number of rows (max 500px)
-            row_height = 35  # approximate height per row
+            # Create table with checkbox selection
+            row_height = 35
             header_height = 40
             calculated_height = min(len(df) * row_height + header_height, 500)
 
@@ -130,33 +190,45 @@ class WorklistView(param.Parameterized):
                 sizing_mode="stretch_width",
                 show_index=False,
                 height=calculated_height,
-                selectable=False,
+                selectable="checkbox",
                 page_size=20,
-                editors={col: None for col in df.columns},  # Disable all editors
+                editors={col: None for col in df.columns},
             )
+            self._table_widget = table_widget
 
-            # Handle row click - click anywhere on the row to inspect
+            # Handle row click for inspection
             def on_row_click(event: object) -> None:
                 logger.info(f"Row click event fired: {event}")
-                logger.info(f"Event row: {getattr(event, 'row', 'NO ROW ATTR')}")
                 if event.row is not None:
-                    # Get the item ID from the clicked row
                     row_data = df.iloc[event.row]
                     item_id = row_data["id"]
-                    logger.info(f"Item ID: {item_id}")
-                    # Find the item and set active sequence
                     item = next((i for i in wl.items if i.id == item_id), None)
                     if item:
-                        logger.info(f"Setting active sequence: {item.sequence.name}")
                         self._state.active_sequence = item.sequence
                         self._state.show_sequence_modal = True
-                        logger.info(f"Modal state set to: {self._state.show_sequence_modal}")
-                    else:
-                        logger.warning(f"No item found for ID: {item_id}")
-                else:
-                    logger.warning("Event row is None")
 
             table_widget.on_click(on_row_click)
+
+            # Create worklist button handler
+            def on_create_wl(event):
+                self._create_wl_section.visible = True
+
+            create_wl_btn.on_click(on_create_wl)
+
+            def on_create_confirm(event):
+                self._create_worklist_from_selection(
+                    wl_name_input.value,
+                    table_widget.selection,
+                    df,
+                )
+                self._create_wl_section.visible = False
+
+            def on_create_cancel(event):
+                self._create_wl_section.visible = False
+
+            create_confirm_btn.on_click(on_create_confirm)
+            create_cancel_btn.on_click(on_create_cancel)
+
             table_or_empty = table_widget
 
         # Origin summary chips
@@ -169,11 +241,42 @@ class WorklistView(param.Parameterized):
 
         return pn.Column(
             toolbar,
+            self._create_wl_section,
             pn.pane.HTML(f'<div style="margin-bottom:8px;">{origin_chips}</div>') if origin_chips else pn.pane.HTML(""),
             table_or_empty,
             sizing_mode="stretch_width",
             styles={"padding": "8px 16px"},
         )
+
+    def _create_worklist_from_selection(self, name: str, selection: List[int], df: pd.DataFrame) -> None:
+        """Create a new worklist from selected rows."""
+        if not selection:
+            self._state.set_status("No rows selected. Use checkboxes to select sequences.")
+            return
+
+        from core.models.worklist import Worklist
+
+        wl = self._state.worklist
+        new_wl = Worklist(name=name or f"Selection ({len(selection)} items)")
+
+        for idx in selection:
+            if 0 <= idx < len(df):
+                item_id = df.iloc[idx]["id"]
+                item = next((i for i in wl.items if i.id == item_id), None)
+                if item:
+                    new_wl.add(item.sequence, origin=item.origin)
+
+        # Add to worklists list
+        worklists = list(self._state.worklists)
+        if not worklists:
+            # Add current worklist first
+            worklists.append(wl)
+        worklists.append(new_wl)
+        self._state.worklists = worklists
+        self._state.active_worklist_index = len(worklists) - 1
+        self._state.worklist = new_wl
+        self._state.param.trigger("worklist")
+        self._state.set_status(f"Created worklist '{name}' with {new_wl.count} sequences")
 
     def _export_csv(self, event: object) -> None:
         df = self._to_dataframe().drop(columns=["id"], errors="ignore")
@@ -183,31 +286,37 @@ class WorklistView(param.Parameterized):
 
     def _run_selected_analysis(self, analysis_name: str) -> None:
         """Run the selected analysis on all sequences that haven't been analyzed yet."""
-        import logging
-        logger = logging.getLogger(__name__)
         logger.info(f"Running analysis: {analysis_name}")
 
         if analysis_name == "Run All Analyses":
-            # Run all available analyses
             self._run_base_analysis()
             for model_reg in self._state.model_registry.scoring_models:
                 self._run_model_analysis(model_reg.model.name)
         elif analysis_name == "Base Analysis":
             self._run_base_analysis()
         else:
-            # It's a model name
             self._run_model_analysis(analysis_name)
 
     def _run_base_analysis(self) -> None:
-        """Run base analysis on sequences that haven't been analyzed."""
+        """Run base analysis on sequences that haven't been analyzed, using current settings."""
         from core.analysis.analyzer import SequenceAnalyzer
-        analyzer = SequenceAnalyzer()
+
+        # Get settings from state
+        settings = self._state.analysis_settings or {}
+
+        # Build analyzer with settings
+        analyzer = SequenceAnalyzer(
+            gc_window=settings.get("gc_window", 100),
+            gc_step=settings.get("gc_step", 1),
+            homopolymer_min_run=settings.get("homopolymer_min_run", 5),
+            restriction_enzymes=settings.get("restriction_enzymes"),
+            cai_organism=settings.get("cai_organism", "human").lower().replace(" ", "").replace(".", ""),
+        )
 
         analyzed_count = 0
         skipped_count = 0
 
         for item in self._state.worklist.items:
-            # Skip if already analyzed
             if "base_analysis" in item.analyses:
                 skipped_count += 1
                 continue
@@ -230,7 +339,6 @@ class WorklistView(param.Parameterized):
         analyzed_count = 0
         skipped_count = 0
 
-        # Get the model from registry
         model_reg = next(
             (m for m in self._state.model_registry.all_models if m.model.name == model_name),
             None
@@ -241,14 +349,12 @@ class WorklistView(param.Parameterized):
             return
 
         for item in self._state.worklist.items:
-            # Skip if already scored by this model
             if model_name in item.analyses:
                 skipped_count += 1
                 continue
 
             try:
                 score = model_reg.model.score(item.sequence)
-                # Store as a dict with the score
                 item.analyses[model_name] = {"score": score}
                 analyzed_count += 1
             except Exception as e:

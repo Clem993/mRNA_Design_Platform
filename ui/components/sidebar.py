@@ -48,7 +48,8 @@ class RegistrySidebar(param.Parameterized):
             margin=0,
         )
 
-    @param.depends("_state.worklist", "_state.db_connections", "_state.model_registry")
+    @param.depends("_state.worklist", "_state.db_connections", "_state.model_registry",
+                    "_state.backbone_library", "_state.worklists")
     def panel(self) -> pn.Column:
         children = []
 
@@ -65,8 +66,42 @@ class RegistrySidebar(param.Parameterized):
         children.append(self._divider())
 
         # ── WORKLIST section ─────────────────────────────────────────────────
-        children.append(self._section_label("Worklist"))
-        if self._state.worklist and self._state.worklist.count > 0:
+        children.append(self._section_label("Worklists"))
+
+        # Show all worklists if multiple exist
+        if self._state.worklists:
+            for i, wl in enumerate(self._state.worklists):
+                is_active = (i == self._state.active_worklist_index)
+                btn = pn.widgets.Button(
+                    name=f"📋  {wl.name} ({wl.count})",
+                    button_type="light",
+                    sizing_mode="stretch_width",
+                    margin=(2, 8),
+                    stylesheets=[f"""
+                        :host .bk-btn {{
+                            background: {'#1E3A5F' if is_active else '#1E293B'};
+                            color: {'#93C5FD' if is_active else '#94A3B8'};
+                            border: {'1px solid #312E81' if is_active else 'none'};
+                            border-radius: 4px;
+                            font-size: 11px;
+                            text-align: left;
+                            padding: 5px 10px;
+                            font-weight: {'600' if is_active else '400'};
+                        }}
+                        :host .bk-btn:hover {{
+                            background: #1E3A5F;
+                        }}
+                    """],
+                )
+
+                def _switch_worklist(event, idx=i):
+                    self._state.active_worklist_index = idx
+                    self._state.worklist = self._state.worklists[idx]
+                    self._state.active_tab = "worklist"
+
+                btn.on_click(_switch_worklist)
+                children.append(btn)
+        elif self._state.worklist and self._state.worklist.count > 0:
             children.append(self._worklist_button())
         else:
             children.append(pn.pane.HTML(
@@ -138,31 +173,49 @@ class RegistrySidebar(param.Parameterized):
         children.append(self._divider())
         children.append(self._section_label("Models"))
 
-        # Show loaded models
+        # Show loaded models with type and source badges
         if self._state.model_registry and len(self._state.model_registry.all_models) > 0:
             for model_reg in self._state.model_registry.all_models:
                 model_name = model_reg.model.name
-                model_btn = pn.widgets.Button(
-                    name=f"📊 {model_name}",
-                    button_type="light",
+                # Type badge
+                if model_reg.model_type == "scoring":
+                    type_color = "#3B82F6"
+                    type_label = "ANALYTICAL"
+                    icon = "📊"
+                else:
+                    type_color = "#8B5CF6"
+                    type_label = "GENERATIVE"
+                    icon = "🧪"
+                # Source badge
+                if model_reg.source == "catalog":
+                    src_color = "#10B981"
+                    src_label = "IMPORTED"
+                elif model_reg.source == "api":
+                    src_color = "#F59E0B"
+                    src_label = "API"
+                else:
+                    src_color = "#6366F1"
+                    src_label = "BUILTIN"
+                # Repository line
+                repo_line = ""
+                if model_reg.repository:
+                    repo_line = (
+                        f'<div style="font-size:9px;color:#475569;margin-top:1px;'
+                        f'padding-left:10px;overflow:hidden;text-overflow:ellipsis;'
+                        f'white-space:nowrap;">via {model_reg.repository}</div>'
+                    )
+                children.append(pn.pane.HTML(
+                    f'<div style="background:#1E293B;border-radius:4px;padding:6px 10px;margin:2px 8px;">'
+                    f'<div style="font-size:11px;color:#94A3B8;">{icon} {model_name}</div>'
+                    f'<div style="margin-top:3px;">'
+                    f'<span style="background:{type_color}33;color:{type_color};padding:1px 5px;'
+                    f'border-radius:8px;font-size:8px;font-weight:600;">{type_label}</span> '
+                    f'<span style="background:{src_color}33;color:{src_color};padding:1px 5px;'
+                    f'border-radius:8px;font-size:8px;font-weight:600;">{src_label}</span>'
+                    f'</div>{repo_line}</div>',
                     sizing_mode="stretch_width",
-                    margin=(2, 8),
-                    stylesheets=["""
-                        :host .bk-btn {
-                            background: #1E293B;
-                            color: #94A3B8;
-                            border: none;
-                            border-radius: 4px;
-                            font-size: 11px;
-                            text-align: left;
-                            padding: 5px 10px;
-                        }
-                        :host .bk-btn:hover {
-                            background: #334155;
-                        }
-                    """],
-                )
-                children.append(model_btn)
+                    margin=0,
+                ))
         else:
             children.append(pn.pane.HTML(
                 f'<div style="font-size:11px;color:{_SECTION};padding:3px 12px;">'
@@ -171,16 +224,16 @@ class RegistrySidebar(param.Parameterized):
                 margin=0,
             ))
 
-        load_model_btn = pn.widgets.Button(
-            name="⊕ Load Built-in Models",
+        browse_model_btn = pn.widgets.Button(
+            name="⊕ Browse Model Repository",
             button_type="light",
             sizing_mode="stretch_width",
             margin=(6, 8),
             stylesheets=["""
                 :host .bk-btn {
                     background: transparent;
-                    color: #10B981;
-                    border: 1px solid #064E3B;
+                    color: #6366F1;
+                    border: 1px solid #312E81;
                     border-radius: 6px;
                     font-size: 11px;
                     font-weight: 600;
@@ -191,8 +244,30 @@ class RegistrySidebar(param.Parameterized):
                 }
             """],
         )
-        load_model_btn.on_click(self._on_load_model)
-        children.append(load_model_btn)
+        browse_model_btn.on_click(self._on_browse_models)
+        children.append(browse_model_btn)
+
+        # ── BACKBONES section ─────────────────────────────────────────────────
+        children.append(self._divider())
+        children.append(self._section_label("Backbones"))
+
+        if self._state.backbone_library:
+            for bb in self._state.backbone_library:
+                children.append(pn.pane.HTML(
+                    f'<div style="background:#1E293B;border-radius:4px;padding:5px 10px;margin:2px 8px;">'
+                    f'<div style="font-size:11px;color:#94A3B8;">🧬 {bb.name}</div>'
+                    f'<div style="font-size:9px;color:#475569;">{bb.length:,} bp</div>'
+                    f'</div>',
+                    sizing_mode="stretch_width",
+                    margin=0,
+                ))
+        else:
+            children.append(pn.pane.HTML(
+                f'<div style="font-size:11px;color:{_SECTION};padding:3px 12px;">'
+                f'No backbones imported</div>',
+                sizing_mode="stretch_width",
+                margin=0,
+            ))
 
         return pn.Column(
             *children,
@@ -240,38 +315,6 @@ class RegistrySidebar(param.Parameterized):
         # Show database import modal
         self._state.show_db_import_modal = True
 
-    def _on_load_model(self, event: object) -> None:
-        """Load built-in scoring models into the registry."""
-        from models import RNAStructureMFEScorer, mRNAStabilityScorer
-
-        # Check if models are already loaded
-        existing_models = {m.model.name for m in self._state.model_registry.all_models}
-
-        models_loaded = []
-
-        # Load RNAstructure MFE scorer
-        if "RNAstructure MFE" not in existing_models:
-            self._state.model_registry._register(
-                RNAStructureMFEScorer(),
-                "scoring",
-                "builtin",
-                "models/rna_structure_scorer.py"
-            )
-            models_loaded.append("RNAstructure MFE")
-
-        # Load mRNA Stability scorer
-        if "mRNA Stability" not in existing_models:
-            self._state.model_registry._register(
-                mRNAStabilityScorer(organism="human"),
-                "scoring",
-                "builtin",
-                "models/mrna_stability_scorer.py"
-            )
-            models_loaded.append("mRNA Stability")
-
-        if models_loaded:
-            self._state.set_status(f"Loaded {len(models_loaded)} model(s): {', '.join(models_loaded)}")
-            # Trigger update
-            self._state.param.trigger("model_registry")
-        else:
-            self._state.set_status("All built-in models already loaded")
+    def _on_browse_models(self, event: object) -> None:
+        """Open the model repository browser modal."""
+        self._state.show_model_repo_modal = True

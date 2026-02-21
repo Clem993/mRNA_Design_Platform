@@ -66,6 +66,7 @@ class DatabaseImportPanel(param.Parameterized):
         self._pg_password = pn.widgets.PasswordInput(name="Password", value="demo_pass_2024", width=200)
         self._csv_path = pn.widgets.TextInput(
             name="File / Directory Path",
+            value="demo/mrna_sequences.csv",
             placeholder="/path/to/file.csv",
             width=400,
         )

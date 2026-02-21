@@ -63,13 +63,21 @@ _ensure-uv:
 
 _ensure-venv:
 	@if [ ! -d ".venv" ]; then \
-		echo "Creating virtual environment (Python 3.13)..."; \
-		$(UV) venv .venv --python 3.13; \
+		echo "Creating virtual environment..."; \
+		if command -v $(UV) >/dev/null 2>&1; then \
+			$(UV) venv .venv --python 3.13; \
+		else \
+			python3 -m venv .venv; \
+		fi; \
 	fi
 
 _install-deps:
 	@echo "Installing dependencies..."
-	@$(UV) pip install -e ".[dev]" --python $(PYTHON) --quiet
+	@if command -v $(UV) >/dev/null 2>&1; then \
+		$(UV) pip install -r requirements-dev.txt --python $(PYTHON) --quiet; \
+	else \
+		$(PYTHON) -m pip install -r requirements-dev.txt --quiet; \
+	fi
 
 # ── App ───────────────────────────────────────────────────────────────────────
 run: _check-venv ## Start the app → http://localhost:5007

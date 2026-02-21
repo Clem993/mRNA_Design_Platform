@@ -170,6 +170,14 @@ class SchemaMapper:
                 except Exception:
                     pass
             kwargs[mapping.target_field] = value
+        # name is required — fall back to first non-empty string value in the row
+        if "name" not in kwargs or not kwargs["name"]:
+            for v in row.values():
+                if isinstance(v, str) and v.strip():
+                    kwargs["name"] = v.strip()[:80]
+                    break
+            else:
+                kwargs["name"] = "unnamed"
         return mRNASequence(**kwargs)  # type: ignore[arg-type]
 
     def map_dataframe(self, df: pd.DataFrame) -> List[mRNASequence]:

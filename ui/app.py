@@ -130,7 +130,7 @@ pn.extension(
 
 # ── Tab names & index ─────────────────────────────────────────────────────────
 _TAB_NAMES = [
-    "Import Database",
+    "Import Data",
     "Model Repository",
     "Worklist",
     "Parts Workshop",

@@ -1,11 +1,11 @@
 """
-Database import panel.
+Import Data panel.
 
 Lets the user:
-1. Configure a new database connection (SQLite / PostgreSQL / CSV)
-2. Choose a table from the connected database
-3. Map database columns to mRNASequence fields (SchemaMapper)
-4. Import selected records into the registry
+1. Choose a data source (CSV / Excel or PostgreSQL)
+2. Connect / load the source
+3. Preview and map columns to mRNASequence fields
+4. Import into a new or existing worklist
 """
 from __future__ import annotations
 
@@ -39,16 +39,16 @@ def _log_resources(label: str) -> None:
             f"CPU={proc.cpu_percent(interval=None):.1f}%"
         )
     except ImportError:
-        pass  # psutil not available
+        pass
 
 
-_BACKEND_OPTIONS = ["SQLite", "PostgreSQL", "CSV / Excel"]
+_SOURCE_OPTIONS = ["CSV / Excel", "PostgreSQL"]
 
 _FIELD_OPTIONS = ["(skip)"] + sorted(SEQUENCE_FIELDS)
 
 
 class DatabaseImportPanel(param.Parameterized):
-    """Step-by-step database import workflow."""
+    """Step-by-step data import workflow."""
 
     def __init__(self, state: "AppState", **params: object) -> None:
         super().__init__(**params)
@@ -59,64 +59,119 @@ class DatabaseImportPanel(param.Parameterized):
         self._field_selects: Dict[str, pn.widgets.Select] = {}
         self._status_pane = pn.pane.HTML("")
 
-    # ── Widget builders ───────────────────────────────────────────────────────
+    # ── Source selector ────────────────────────────────────────────────────────
 
-    def _build_connection_form(self) -> pn.Column:
-        self._backend_select = pn.widgets.Select(
-            name="Backend",
-            options=_BACKEND_OPTIONS,
-            value="PostgreSQL",
-            width=200,
+    def _build_source_selector(self) -> pn.Column:
+        self._source_select = pn.widgets.RadioButtonGroup(
+            name="Source",
+            options=_SOURCE_OPTIONS,
+            value="CSV / Excel",
+            button_type="primary",
+            button_style="outline",
         )
-        self._display_name = pn.widgets.TextInput(
+
+        return pn.Column(
+            pn.pane.HTML(
+                '<div style="font-size:14px;font-weight:700;color:#0F172A;'
+                'margin-bottom:8px;">Data Source</div>'
+            ),
+            self._source_select,
+            sizing_mode="stretch_width",
+            styles={
+                "background": "#FFFFFF",
+                "padding": "16px",
+                "border-radius": "8px",
+                "border": "1px solid #E2E8F0",
+                "margin-bottom": "12px",
+            },
+        )
+
+    # ── Connection forms ───────────────────────────────────────────────────────
+
+    def _build_connection_section(self) -> pn.Column:
+        """Dynamic section that changes based on the selected source."""
+        # -- CSV fields --
+        self._csv_path = pn.widgets.TextInput(
+            name="File / Directory Path",
+            value="demo/mrna_sequences.csv",
+            placeholder="/path/to/file.csv  or  /path/to/directory/",
+            width=460,
+        )
+        self._csv_name = pn.widgets.TextInput(
             name="Connection Name",
-            placeholder="demo_db",
-            value="demo_db",
+            placeholder="my_data",
+            value="demo_csv",
             width=200,
         )
-        self._sqlite_path = pn.widgets.TextInput(
-            name="File Path",
-            placeholder="/path/to/database.db",
-            width=400,
+        csv_import_btn = pn.widgets.Button(
+            name="Import",
+            button_type="primary",
+            width=100,
+            margin=(20, 4, 4, 4),
         )
+        csv_import_btn.on_click(self._on_connect)
+
+        csv_form = pn.Column(
+            pn.pane.HTML(
+                '<div style="font-size:11px;color:#64748B;margin-bottom:8px;">'
+                'Point to a .csv, .xlsx, or a directory of CSV files.</div>'
+            ),
+            pn.Row(self._csv_path, self._csv_name),
+            csv_import_btn,
+            sizing_mode="stretch_width",
+        )
+
+        # -- PostgreSQL fields --
         self._pg_host = pn.widgets.TextInput(name="Host", value="localhost", width=200)
         self._pg_port = pn.widgets.IntInput(name="Port", value=5432, width=100)
         self._pg_dbname = pn.widgets.TextInput(name="Database", value="mrna_studio", width=200)
         self._pg_user = pn.widgets.TextInput(name="User", value="demo_user", width=200)
         self._pg_password = pn.widgets.PasswordInput(name="Password", value="demo_pass_2024", width=200)
-        self._csv_path = pn.widgets.TextInput(
-            name="File / Directory Path",
-            value="demo/mrna_sequences.csv",
-            placeholder="/path/to/file.csv",
-            width=400,
+        self._pg_name = pn.widgets.TextInput(
+            name="Connection Name",
+            placeholder="demo_db",
+            value="demo_db",
+            width=200,
+        )
+        pg_connect_btn = pn.widgets.Button(
+            name="Connect",
+            button_type="primary",
+            width=100,
+            margin=(20, 4, 4, 4),
+        )
+        pg_connect_btn.on_click(self._on_connect)
+
+        pg_form = pn.Column(
+            pn.pane.HTML(
+                '<div style="font-size:11px;color:#64748B;margin-bottom:8px;">'
+                'Enter your PostgreSQL connection details.</div>'
+            ),
+            pn.Row(self._pg_host, self._pg_port, self._pg_dbname),
+            pn.Row(self._pg_user, self._pg_password, self._pg_name),
+            pg_connect_btn,
+            sizing_mode="stretch_width",
         )
 
-        connect_btn = pn.widgets.Button(name="Connect", button_type="primary", margin=(8, 0))
-        connect_btn.on_click(self._on_connect)
-
-        @param.depends(self._backend_select.param.value)
-        def backend_specific_fields(backend: str) -> pn.Column:
-            if backend == "SQLite":
-                return pn.Column(self._sqlite_path)
-            elif backend == "PostgreSQL":
-                return pn.Column(
-                    pn.Row(self._pg_host, self._pg_port),
-                    pn.Row(self._pg_dbname, self._pg_user),
-                    self._pg_password,
-                )
-            else:
-                return pn.Column(self._csv_path)
+        @param.depends(self._source_select.param.value)
+        def _active_form(source: str) -> pn.Column:
+            if source == "PostgreSQL":
+                return pg_form
+            return csv_form
 
         return pn.Column(
-            pn.pane.HTML(
-                '<div style="font-size:14px;font-weight:700;margin-bottom:8px;">'
-                'Connect to Database</div>'
-            ),
-            pn.Row(self._backend_select, self._display_name),
-            pn.panel(backend_specific_fields),
-            connect_btn,
+            pn.panel(_active_form),
             self._status_pane,
+            sizing_mode="stretch_width",
+            styles={
+                "background": "#FFFFFF",
+                "padding": "16px",
+                "border-radius": "8px",
+                "border": "1px solid #E2E8F0",
+                "margin-bottom": "12px",
+            },
         )
+
+    # ── Table selector (PostgreSQL / multi-file) ──────────────────────────────
 
     def _build_table_selector(self) -> pn.Column:
         if not self._connector:
@@ -133,25 +188,57 @@ class DatabaseImportPanel(param.Parameterized):
 
         return pn.Column(
             pn.pane.HTML(
-                '<div style="font-size:13px;font-weight:700;margin:12px 0 6px 0;">'
+                '<div style="font-size:13px;font-weight:700;margin:4px 0 6px 0;">'
                 'Select Table</div>'
             ),
             pn.Row(self._table_select, preview_btn),
         )
 
+    # ── Column mapping form ───────────────────────────────────────────────────
+
     def _build_mapping_form(self) -> pn.Column:
         if not self._columns:
             return pn.Column()
 
-        # Worklist name input
+        # Worklist destination
         default_worklist_name = f"{self._connector.name}.{self._table_select.value}"
-        self._worklist_name = pn.widgets.TextInput(
-            name="Worklist Name",
-            value=default_worklist_name,
-            placeholder="e.g., demo_db.mrna_sequences",
-            width=400,
+
+        self._wl_mode = pn.widgets.RadioButtonGroup(
+            name="Destination",
+            options=["New Worklist", "Add to Existing"],
+            value="New Worklist",
+            button_type="default",
+            button_style="outline",
         )
 
+        self._wl_new_name = pn.widgets.TextInput(
+            name="Worklist Name",
+            value=default_worklist_name,
+            placeholder="e.g. My Sequences",
+            width=300,
+        )
+
+        # Existing worklist selector
+        existing_names = []
+        if self._state.worklist and self._state.worklist.count > 0:
+            existing_names.append(self._state.worklist.name)
+        for wl in self._state.worklists:
+            if wl.name not in existing_names:
+                existing_names.append(wl.name)
+
+        self._wl_existing_select = pn.widgets.Select(
+            name="Worklist",
+            options=existing_names if existing_names else ["(no worklists yet)"],
+            width=300,
+        )
+
+        @param.depends(self._wl_mode.param.value)
+        def _wl_destination_fields(mode: str) -> pn.Column:
+            if mode == "New Worklist":
+                return pn.Column(self._wl_new_name)
+            return pn.Column(self._wl_existing_select)
+
+        # Column mapping rows
         self._field_selects = {}
         rows = []
         for col in self._columns:
@@ -168,7 +255,8 @@ class DatabaseImportPanel(param.Parameterized):
                     f'padding-top:8px;min-width:180px;">{col}</div>'
                 ),
                 pn.pane.HTML(
-                    '<div style="padding-top:8px;font-size:12px;color:#7F8C8D;">→</div>'
+                    '<div style="padding-top:8px;font-size:12px;color:#7F8C8D;">'
+                    '&rarr;</div>'
                 ),
                 sel,
             ))
@@ -180,17 +268,21 @@ class DatabaseImportPanel(param.Parameterized):
 
         return pn.Column(
             pn.pane.HTML(
-                '<div style="font-size:13px;font-weight:700;margin:12px 0 6px 0;">'
-                'Worklist Configuration</div>'
+                '<div style="font-size:13px;font-weight:700;margin:4px 0 6px 0;">'
+                'Destination Worklist</div>'
             ),
-            self._worklist_name,
+            self._wl_mode,
+            pn.panel(_wl_destination_fields),
+            pn.layout.Divider(),
             pn.pane.HTML(
-                '<div style="font-size:13px;font-weight:700;margin:12px 0 6px 0;">'
+                '<div style="font-size:13px;font-weight:700;margin:4px 0 6px 0;">'
                 'Map Columns to mRNA Fields</div>'
             ),
             pn.Column(*rows),
             import_btn,
         )
+
+    # ── Preview table ─────────────────────────────────────────────────────────
 
     def _build_preview_table(self) -> pn.viewable.Viewable:
         if self._preview_df is None:
@@ -208,9 +300,7 @@ class DatabaseImportPanel(param.Parameterized):
             ),
         )
 
-    # ── Reactive panel ─────────────────────────────────────────────────────────
-    # Dynamic sections are held as mutable Column instances so we can clear
-    # and refill them on button clicks without needing pn.bind(lambda: ...).
+    # ── Main panel ────────────────────────────────────────────────────────────
 
     def panel(self) -> pn.Column:
         self._table_section   = pn.Column(sizing_mode="stretch_width")
@@ -220,13 +310,13 @@ class DatabaseImportPanel(param.Parameterized):
         return pn.Column(
             pn.pane.HTML(
                 '<div style="font-size:16px;font-weight:800;padding:8px 0 4px 0;">'
-                'Import Database</div>'
+                'Import Data</div>'
                 '<div style="font-size:12px;color:#64748B;margin-bottom:10px;">'
-                'Connect to a database server (PostgreSQL, SQLite, or CSV), authenticate with '
-                'credentials, then map schema fields to the mRNA sequence model.<br>'
-                '<span style="color:#6366F1;">💡 Demo database pre-filled — or switch to SQLite/CSV.</span></div>'
+                'Load sequences from a CSV file or PostgreSQL database, '
+                'map columns to the mRNA model, and import into a worklist.</div>'
             ),
-            self._build_connection_form(),
+            self._build_source_selector(),
+            self._build_connection_section(),
             self._table_section,
             self._preview_section,
             self._mapping_section,
@@ -234,7 +324,7 @@ class DatabaseImportPanel(param.Parameterized):
             styles={"padding": "8px 16px"},
         )
 
-    # ── Event handlers ─────────────────────────────────────────────────────────
+    # ── Section refreshers ────────────────────────────────────────────────────
 
     def _refresh_table_section(self) -> None:
         self._table_section.clear()
@@ -248,16 +338,15 @@ class DatabaseImportPanel(param.Parameterized):
         self._mapping_section.clear()
         self._mapping_section.append(self._build_mapping_form())
 
+    # ── Event handlers ────────────────────────────────────────────────────────
+
     def _on_connect(self, event: object) -> None:
         t_start = time.perf_counter()
         _log_resources("connect:start")
-        backend = self._backend_select.value
-        name = self._display_name.value or f"conn_{len(self._state.db_connections)+1}"
+        source = self._source_select.value
 
-        if backend == "SQLite":
-            params = {"path": self._sqlite_path.value}
-            backend_key = "sqlite"
-        elif backend == "PostgreSQL":
+        if source == "PostgreSQL":
+            name = self._pg_name.value or f"conn_{len(self._state.db_connections)+1}"
             params = {
                 "host": self._pg_host.value,
                 "port": self._pg_port.value,
@@ -267,6 +356,7 @@ class DatabaseImportPanel(param.Parameterized):
             }
             backend_key = "postgres"
         else:
+            name = self._csv_name.value or "csv_import"
             params = {"path": self._csv_path.value}
             backend_key = "csv"
 
@@ -287,19 +377,25 @@ class DatabaseImportPanel(param.Parameterized):
             self._connector = connector
             self._status_pane.object = (
                 f'<div style="color:#10B981;font-size:12px;margin-top:4px;">'
-                f'✓ Connected to {name}</div>'
+                f'&#10003; Connected to {name}</div>'
             )
 
             t0 = time.perf_counter()
             self._refresh_table_section()
             logger.info(f"[PERF] _refresh_table_section took {time.perf_counter()-t0:.4f}s")
 
+            # Auto-preview the first table for CSV (single-file imports)
+            tables = connector.list_tables()
+            if backend_key == "csv" and len(tables) == 1:
+                self._table_select.value = tables[0]
+                self._on_preview(None)
+
             _log_resources("connect:end")
             logger.info(f"[PERF] Total _on_connect took {time.perf_counter()-t_start:.4f}s")
         except Exception as e:
             self._status_pane.object = (
                 f'<div style="color:#EF4444;font-size:12px;margin-top:4px;">'
-                f'✗ Connection failed: {e}</div>'
+                f'&#10007; Connection failed: {e}</div>'
             )
 
     def _on_preview(self, event: object) -> None:
@@ -345,7 +441,7 @@ class DatabaseImportPanel(param.Parameterized):
 
         if "name" not in mapping.values():
             self._status_pane.object = (
-                '<div style="color:#E74C3C;">Must map at least one column to "name".</div>'
+                '<div style="color:#EF4444;">Must map at least one column to "name".</div>'
             )
             return
 
@@ -367,15 +463,39 @@ class DatabaseImportPanel(param.Parameterized):
             logger.info(f"[PERF] SchemaMapper.map_dataframe() took {time.perf_counter()-t0:.4f}s, "
                         f"produced {len(sequences)} mRNASequence objects")
 
-            # Step 3: Create worklist (pure data, no UI yet)
+            # Step 3: Determine target worklist
             t0 = time.perf_counter()
             from core.models.worklist import Worklist
-            worklist_name = self._worklist_name.value or f"{self._connector.name}.{table}"
-            new_worklist = Worklist(name=worklist_name)
-            new_worklist.add_many(sequences, origin="database_import")
+
+            add_to_existing = (
+                self._wl_mode.value == "Add to Existing"
+                and self._wl_existing_select.value
+                and self._wl_existing_select.value != "(no worklists yet)"
+            )
+
+            if add_to_existing:
+                target_name = self._wl_existing_select.value
+                # Find the existing worklist
+                target_wl = None
+                if self._state.worklist and self._state.worklist.name == target_name:
+                    target_wl = self._state.worklist
+                else:
+                    for wl in self._state.worklists:
+                        if wl.name == target_name:
+                            target_wl = wl
+                            break
+                if target_wl is None:
+                    target_wl = Worklist(name=target_name)
+                target_wl.add_many(sequences, origin="import")
+                new_worklist = target_wl
+            else:
+                worklist_name = self._wl_new_name.value or f"{self._connector.name}.{table}"
+                new_worklist = Worklist(name=worklist_name)
+                new_worklist.add_many(sequences, origin="import")
+                target_name = worklist_name
             logger.info(f"[PERF] Worklist creation took {time.perf_counter()-t0:.4f}s")
 
-            # Step 4: Collect parts candidates (pure data, no UI yet)
+            # Step 4: Collect parts candidates
             t0 = time.perf_counter()
             from core.models.parts import create_part_from_component
             all_candidates = []
@@ -392,25 +512,29 @@ class DatabaseImportPanel(param.Parameterized):
                             sequence=value,
                             part_type=part_type,
                             name=f"{seq.name}_{suffix}",
-                            source="database_import",
+                            source="import",
                             origin_sequence_id=seq.id,
                         ))
             logger.info(f"[PERF] Parts collection took {time.perf_counter()-t0:.4f}s, "
                         f"{len(all_candidates)} candidates")
 
-            # Step 5: Apply ALL state mutations inside hold + batch
-            # pn.io.hold() — queues Bokeh document patches into one websocket msg
-            # batch_call_watchers — defers param watcher callbacks until exit
+            # Step 5: Batched state update
             t0 = time.perf_counter()
             import param as pm
             with pn.io.hold():
                 with pm.parameterized.batch_call_watchers(self._state):
                     self._state.worklist = new_worklist
+                    # Track in worklists list if it's a new worklist
+                    if not add_to_existing:
+                        worklists = list(self._state.worklists)
+                        worklists.append(new_worklist)
+                        self._state.worklists = worklists
+                        self._state.active_worklist_index = len(worklists) - 1
                     self._state.register_db_connection(self._connector, mapper)
                     total_parts = self._state.add_parts_batch(all_candidates)
                     self._state.active_tab = "worklist"
                     self._state.set_status(
-                        f"Created worklist '{worklist_name}' with {len(sequences)} sequences. "
+                        f"Imported {len(sequences)} sequences into '{target_name}'. "
                         f"Extracted {total_parts} reusable parts."
                     )
             logger.info(f"[PERF] Batched state update + render took {time.perf_counter()-t0:.4f}s")
@@ -418,10 +542,11 @@ class DatabaseImportPanel(param.Parameterized):
             _log_resources("import:end")
             logger.info(f"[PERF] *** Total _on_import took {time.perf_counter()-t_total:.4f}s ***")
 
+            verb = "Added to" if add_to_existing else "Created"
             self._status_pane.object = (
                 f'<div style="color:#10B981;font-size:12px;">'
-                f'✓ Created new worklist "{worklist_name}" with {len(sequences)} sequences<br>'
-                f'✓ Extracted {total_parts} parts to library</div>'
+                f'&#10003; {verb} worklist "{target_name}" with {len(sequences)} sequences<br>'
+                f'&#10003; Extracted {total_parts} parts to library</div>'
             )
         except Exception as e:
             logger.exception(f"[PERF] Import failed after {time.perf_counter()-t_total:.4f}s")
@@ -433,7 +558,6 @@ class DatabaseImportPanel(param.Parameterized):
     def _auto_suggest(column_name: str) -> str:
         """Guess the target field from common column naming patterns."""
         col = column_name.lower().replace(" ", "_").replace("-", "_")
-        # Exact matches first (avoid false positives)
         exact = {
             "gene_name": "name",
             "name": "name",
@@ -447,7 +571,6 @@ class DatabaseImportPanel(param.Parameterized):
         }
         if col in exact:
             return exact[col]
-        # Substring hints
         hints = {
             "gene": "name",
             "label": "name",

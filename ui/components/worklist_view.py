@@ -7,6 +7,7 @@ select rows to create new worklists, and export as CSV.
 """
 from __future__ import annotations
 
+import io
 import logging
 from typing import TYPE_CHECKING, List
 
@@ -77,8 +78,13 @@ class WorklistView(param.Parameterized):
         df = self._to_dataframe()
 
         # Toolbar
-        export_btn = pn.widgets.Button(name="Export CSV", button_type="light", margin=(4, 4))
-        export_btn.on_click(self._export_csv)
+        export_btn = pn.widgets.FileDownload(
+            callback=lambda: self._make_csv(),
+            filename=f"{wl.name.replace(' ', '_')}_export.csv",
+            button_type="light",
+            label="Export CSV",
+            margin=(4, 4),
+        )
 
         # Build analysis options: base analysis + loaded models + "Run All"
         analysis_options = ["Base Analysis"]
@@ -289,11 +295,13 @@ class WorklistView(param.Parameterized):
         self._state.worklist = new_wl
         self._state.set_status(f"Created worklist '{name}' with {new_wl.count} sequences")
 
-    def _export_csv(self, event: object) -> None:
+    def _make_csv(self) -> io.BytesIO:
+        """Build CSV bytes for the FileDownload widget."""
         df = self._to_dataframe().drop(columns=["id"], errors="ignore")
-        path = "worklist_export.csv"
-        df.to_csv(path, index=False)
-        self._state.set_status(f"Worklist exported to {path}")
+        buf = io.BytesIO()
+        df.to_csv(buf, index=False)
+        buf.seek(0)
+        return buf
 
     def _run_selected_analysis(self, analysis_name: str) -> None:
         """Run the selected analysis on all sequences that haven't been analyzed yet."""

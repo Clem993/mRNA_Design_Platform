@@ -6,9 +6,11 @@ selection, QC checks, and assembly preview.
 """
 from __future__ import annotations
 
+import io
 import logging
 from typing import TYPE_CHECKING, List, Optional
 
+import pandas as pd
 import panel as pn
 import param
 
@@ -196,28 +198,37 @@ class PlasmidAssemblyPanel(param.Parameterized):
             margin=(0, 16, 0, 0),
         )
 
-        # ── Add to Worklist section (shown after assembly) ──────────────────
+        # ── Add to Worklist / Export section (shown after assembly) ────────
         self._worklist_name_input = pn.widgets.TextInput(
             name="Worklist Name",
             placeholder="e.g. Assembly Batch 1",
             width=250,
         )
         add_to_wl_btn = pn.widgets.Button(
-            name="＋ Add to Worklist",
+            name="Save to Worklist",
             button_type="primary",
             width=160,
             margin=(20, 4, 4, 4),
         )
         add_to_wl_btn.on_click(self._on_add_to_worklist)
 
+        self._export_csv_btn = pn.widgets.FileDownload(
+            callback=lambda: self._make_assembly_csv(),
+            filename="assembly_export.csv",
+            button_type="light",
+            label="Export CSV",
+            width=120,
+            margin=(20, 4, 4, 4),
+        )
+
         self._add_to_wl_section = pn.Column(
             pn.pane.HTML(
                 '<div style="font-size:13px;font-weight:700;color:#0F172A;margin-bottom:4px;">'
-                'Save to Worklist</div>'
+                'Save Results</div>'
                 '<div style="font-size:11px;color:#64748B;margin-bottom:6px;">'
-                'Create a new worklist from the assembled plasmids.</div>'
+                'Create a new worklist from the assembled plasmids, or export to CSV.</div>'
             ),
-            pn.Row(self._worklist_name_input, add_to_wl_btn),
+            pn.Row(self._worklist_name_input, add_to_wl_btn, self._export_csv_btn),
             sizing_mode="stretch_width",
             styles={"background": "#F8FAFC", "padding": "12px", "border-radius": "6px",
                     "border": "1px solid #E2E8F0", "margin-top": "8px"},
@@ -372,12 +383,36 @@ class PlasmidAssemblyPanel(param.Parameterized):
             f'</div>'
         )
 
-        # Show "Add to Worklist" section with a default name
+        # Show "Save Results" section with a default name
         if assembled_count > 0:
             self._worklist_name_input.value = f"{backbone.name} Assembly"
+            self._export_csv_btn.filename = f"{backbone.name.replace(' ', '_')}_assembly.csv"
             self._add_to_wl_section.visible = True
 
         self._state.set_status(f"Assembled {assembled_count} plasmids using {strategy_desc}")
+
+    def _make_assembly_csv(self) -> io.BytesIO:
+        """Build CSV bytes for the FileDownload widget."""
+        rows = []
+        for p in self._assembled_plasmids:
+            rows.append({
+                "Plasmid Name": p.name,
+                "Backbone": p.backbone.name,
+                "Insert": p.insert.name,
+                "Strategy": p.assembly_strategy,
+                "Backbone Length (bp)": p.backbone.length,
+                "Insert Length (bp)": p.insert.length,
+                "Total Length (bp)": len(p.full_sequence) if p.full_sequence else "",
+                "Full Sequence": p.full_sequence or "",
+            })
+        df = pd.DataFrame(rows) if rows else pd.DataFrame(
+            columns=["Plasmid Name", "Backbone", "Insert", "Strategy",
+                     "Backbone Length (bp)", "Insert Length (bp)", "Total Length (bp)"]
+        )
+        buf = io.BytesIO()
+        df.to_csv(buf, index=False)
+        buf.seek(0)
+        return buf
 
     def _on_add_to_worklist(self, event) -> None:
         """Create a new worklist from assembled plasmids."""

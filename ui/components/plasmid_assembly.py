@@ -30,6 +30,7 @@ class PlasmidAssemblyPanel(param.Parameterized):
         self._result_pane = pn.pane.HTML("")
         self._qc_pane = pn.pane.HTML("")
         self._preview_pane = pn.pane.HTML("")
+        self._assembled_plasmids: List[AssembledPlasmid] = []
 
         # Load seed backbones if empty
         if not self._state.backbone_library:
@@ -211,11 +212,40 @@ class PlasmidAssemblyPanel(param.Parameterized):
             margin=(0, 16, 0, 0),
         )
 
+        # ── Add to Worklist section (shown after assembly) ──────────────────
+        self._worklist_name_input = pn.widgets.TextInput(
+            name="Worklist Name",
+            placeholder="e.g. Assembly Batch 1",
+            width=250,
+        )
+        add_to_wl_btn = pn.widgets.Button(
+            name="＋ Add to Worklist",
+            button_type="primary",
+            width=160,
+            margin=(20, 4, 4, 4),
+        )
+        add_to_wl_btn.on_click(self._on_add_to_worklist)
+
+        self._add_to_wl_section = pn.Column(
+            pn.pane.HTML(
+                '<div style="font-size:13px;font-weight:700;color:#0F172A;margin-bottom:4px;">'
+                'Save to Worklist</div>'
+                '<div style="font-size:11px;color:#64748B;margin-bottom:6px;">'
+                'Create a new worklist from the assembled plasmids.</div>'
+            ),
+            pn.Row(self._worklist_name_input, add_to_wl_btn),
+            sizing_mode="stretch_width",
+            styles={"background": "#F8FAFC", "padding": "12px", "border-radius": "6px",
+                    "border": "1px solid #E2E8F0", "margin-top": "8px"},
+            visible=False,
+        )
+
         right_panel = pn.Column(
             pn.pane.HTML('<div style="font-size:14px;font-weight:700;color:#0F172A;margin-bottom:8px;">Assembly Preview</div>'),
             self._preview_pane,
             self._qc_pane,
             self._result_pane,
+            self._add_to_wl_section,
             sizing_mode="stretch_width",
             styles={"background": "#FFFFFF", "padding": "12px", "border-radius": "6px", "border": "1px solid #E2E8F0"},
         )
@@ -335,8 +365,8 @@ class PlasmidAssemblyPanel(param.Parameterized):
             f'</div>'
         )
 
-        # Create assembled plasmids (demo)
-        assembled_count = 0
+        # Create assembled plasmids
+        self._assembled_plasmids = []
         for item in wl.items:
             try:
                 assembled = AssembledPlasmid(
@@ -347,9 +377,11 @@ class PlasmidAssemblyPanel(param.Parameterized):
                     assembly_mode="qc",
                     full_sequence=backbone.sequence + item.sequence.assembled_sequence,
                 )
-                assembled_count += 1
+                self._assembled_plasmids.append(assembled)
             except Exception as e:
                 logger.warning(f"Assembly failed for {item.sequence.name}: {e}")
+
+        assembled_count = len(self._assembled_plasmids)
 
         self._result_pane.object = (
             f'<div style="background:#ECFDF5;border:1px solid #10B981;border-radius:6px;padding:12px;">'
@@ -360,4 +392,35 @@ class PlasmidAssemblyPanel(param.Parameterized):
             f'</div>'
         )
 
+        # Show "Add to Worklist" section with a default name
+        if assembled_count > 0:
+            self._worklist_name_input.value = f"{backbone.name} Assembly"
+            self._add_to_wl_section.visible = True
+
         self._state.set_status(f"Assembled {assembled_count} plasmids using {strategy_desc}")
+
+    def _on_add_to_worklist(self, event) -> None:
+        """Create a new worklist from assembled plasmids."""
+        if not self._assembled_plasmids:
+            self._state.set_status("No assembled plasmids to add.", level="warning")
+            return
+
+        from core.models.worklist import Worklist
+
+        name = self._worklist_name_input.value.strip()
+        if not name:
+            name = "Assembly Worklist"
+
+        new_wl = Worklist(name=name)
+        for plasmid in self._assembled_plasmids:
+            new_wl.add(plasmid.insert, origin="generated")
+
+        # Add to worklists list and switch to it
+        updated = list(self._state.worklists) + [new_wl]
+        self._state.worklists = updated
+        self._state.active_worklist_index = len(updated) - 1
+        self._state.worklist = new_wl
+        self._state.active_tab = "worklist"
+
+        self._add_to_wl_section.visible = False
+        self._state.set_status(f"Created worklist '{name}' with {new_wl.count} sequences")

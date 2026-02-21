@@ -190,8 +190,8 @@ class GenerateSequencesPanel(param.Parameterized):
                     'Imported Generative Models</div>'
                     '<div style="font-size:12px;color:#94A3B8;margin-bottom:8px;">'
                     'No generative models imported. Use the '
-                    '<span style="color:#6366F1;font-weight:600;">Browse Model Repository</span> '
-                    'button in the sidebar to import models.</div>'
+                    '<span style="color:#6366F1;font-weight:600;">Model Repository</span> '
+                    'tab to import models.</div>'
                 ),
                 sizing_mode="stretch_width",
                 styles={"background": "#FFFFFF", "padding": "12px", "border-radius": "6px",
@@ -199,17 +199,36 @@ class GenerateSequencesPanel(param.Parameterized):
             )
 
         # ── Output Section ────────────────────────────────────────────────────
-        add_to_worklist_btn = pn.widgets.Button(
-            name="Add to Worklist",
-            button_type="success",
-            width=150,
-            margin=(8, 4),
-            visible=False,
-        )
-        self._add_btn = add_to_worklist_btn
         self._generated_sequences = []
 
+        self._worklist_name_input = pn.widgets.TextInput(
+            name="Worklist Name",
+            placeholder="e.g. Optimized Batch 1",
+            width=250,
+        )
+        add_to_worklist_btn = pn.widgets.Button(
+            name="＋ Add to Worklist",
+            button_type="success",
+            width=160,
+            margin=(20, 4, 4, 4),
+        )
+        self._add_btn = add_to_worklist_btn
+
         add_to_worklist_btn.on_click(self._on_add_to_worklist)
+
+        self._add_to_wl_section = pn.Column(
+            pn.pane.HTML(
+                '<div style="font-size:13px;font-weight:700;color:#0F172A;margin-bottom:4px;">'
+                'Save to Worklist</div>'
+                '<div style="font-size:11px;color:#64748B;margin-bottom:6px;">'
+                'Create a new worklist from the generated sequences.</div>'
+            ),
+            pn.Row(self._worklist_name_input, add_to_worklist_btn),
+            sizing_mode="stretch_width",
+            styles={"background": "#F8FAFC", "padding": "12px", "border-radius": "6px",
+                    "border": "1px solid #E2E8F0", "margin-top": "8px"},
+            visible=False,
+        )
 
         output_section = pn.Column(
             pn.pane.HTML(
@@ -217,7 +236,7 @@ class GenerateSequencesPanel(param.Parameterized):
                 'Output</div>'
             ),
             self._output_pane,
-            add_to_worklist_btn,
+            self._add_to_wl_section,
             sizing_mode="stretch_width",
             styles={"background": "#FFFFFF", "padding": "12px", "border-radius": "6px",
                      "border": "1px solid #E2E8F0"},
@@ -314,7 +333,9 @@ class GenerateSequencesPanel(param.Parameterized):
             f'✓ Cleaned {len(self._generated_sequences)} sequence(s) for cloning</div>'
         )
         self._output_pane.append(pn.pane.HTML(summary + "".join(results_html), sizing_mode="stretch_width"))
-        self._add_btn.visible = bool(self._generated_sequences)
+        if self._generated_sequences:
+            self._worklist_name_input.value = "Cleaned Sequences"
+            self._add_to_wl_section.visible = True
 
     def _run_codon_optimization(self, mode: str, single_text: str) -> None:
         """Run codon optimization on input sequences."""
@@ -373,7 +394,9 @@ class GenerateSequencesPanel(param.Parameterized):
             f'✓ Optimized {len(self._generated_sequences)} sequence(s) for {self._opt_organism.value}</div>'
         )
         self._output_pane.append(pn.pane.HTML(summary + "".join(results_html), sizing_mode="stretch_width"))
-        self._add_btn.visible = bool(self._generated_sequences)
+        if self._generated_sequences:
+            self._worklist_name_input.value = f"Optimized ({self._opt_organism.value})"
+            self._add_to_wl_section.visible = True
 
     def _run_generative_model(self, model_reg, mode: str, single_text: str) -> None:
         """Run an imported generative model."""
@@ -402,7 +425,8 @@ class GenerateSequencesPanel(param.Parameterized):
                     f'✓ Generated {len(results)} sequence(s) with {model.name}</div>'
                     f'{results_html}'
                 ))
-                self._add_btn.visible = True
+                self._worklist_name_input.value = f"{model.name} Output"
+                self._add_to_wl_section.visible = True
             else:
                 self._output_pane.clear()
                 self._output_pane.append(pn.pane.HTML(
@@ -410,7 +434,7 @@ class GenerateSequencesPanel(param.Parameterized):
                     f'Model registered but not running actual inference. '
                     f'In production, this would generate sequences using the model.</div>'
                 ))
-                self._add_btn.visible = False
+                self._add_to_wl_section.visible = False
         except Exception as e:
             self._output_pane.clear()
             self._output_pane.append(pn.pane.HTML(
@@ -418,15 +442,26 @@ class GenerateSequencesPanel(param.Parameterized):
             ))
 
     def _on_add_to_worklist(self, event) -> None:
-        """Add generated sequences to the worklist."""
+        """Create a new worklist from generated sequences."""
         if not self._generated_sequences:
             return
 
-        for seq in self._generated_sequences:
-            self._state.worklist.add(seq, origin="generated")
+        from core.models.worklist import Worklist
+
+        name = self._worklist_name_input.value.strip()
+        if not name:
+            name = "Generated Sequences"
+
+        new_wl = Worklist(name=name)
+        new_wl.add_many(self._generated_sequences, origin="generated")
+
+        updated = list(self._state.worklists) + [new_wl]
+        self._state.worklists = updated
+        self._state.active_worklist_index = len(updated) - 1
+        self._state.worklist = new_wl
+        self._state.active_tab = "worklist"
 
         count = len(self._generated_sequences)
-        self._state.param.trigger("worklist")
-        self._state.set_status(f"Added {count} generated sequence(s) to worklist")
-        self._add_btn.visible = False
+        self._add_to_wl_section.visible = False
         self._generated_sequences = []
+        self._state.set_status(f"Created worklist '{name}' with {count} sequence(s)")

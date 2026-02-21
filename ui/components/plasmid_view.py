@@ -142,30 +142,49 @@ class PlasmidView(param.Parameterized):
         )
         assemble_btn.on_click(self._on_assemble)
 
-        add_to_worklist_btn = pn.widgets.Button(
-            name="Generate & Add to Worklist",
-            button_type="success",
-            width=220,
-            margin=(12, 4),
-            visible=False,
-        )
-        self._add_to_worklist_btn = add_to_worklist_btn
-        add_to_worklist_btn.on_click(self._on_add_to_worklist)
-
         self._combo_count_pane = pn.pane.HTML("", margin=(12, 4))
 
         controls = pn.Row(
             self._combo_count_pane,
             pn.layout.HSpacer(),
             assemble_btn,
-            add_to_worklist_btn,
             sizing_mode="stretch_width",
+        )
+
+        # Add to worklist section (shown after preview)
+        self._worklist_name_input = pn.widgets.TextInput(
+            name="Worklist Name",
+            placeholder="e.g. Combinatorial Batch 1",
+            width=250,
+        )
+        add_to_worklist_btn = pn.widgets.Button(
+            name="＋ Generate & Add to Worklist",
+            button_type="success",
+            width=240,
+            margin=(20, 4, 4, 4),
+        )
+        self._add_to_worklist_btn = add_to_worklist_btn
+        add_to_worklist_btn.on_click(self._on_add_to_worklist)
+
+        self._add_to_wl_section = pn.Column(
+            pn.pane.HTML(
+                '<div style="font-size:13px;font-weight:700;color:#0F172A;margin-bottom:4px;">'
+                'Save to Worklist</div>'
+                '<div style="font-size:11px;color:#64748B;margin-bottom:6px;">'
+                'Create a new worklist from the generated combinations.</div>'
+            ),
+            pn.Row(self._worklist_name_input, add_to_worklist_btn),
+            sizing_mode="stretch_width",
+            styles={"background": "#F8FAFC", "padding": "12px", "border-radius": "6px",
+                    "border": "1px solid #E2E8F0", "margin-top": "8px"},
+            visible=False,
         )
 
         # Result display
         result_section = pn.Column(
             pn.layout.Divider(),
             self._result_pane,
+            self._add_to_wl_section,
             sizing_mode="stretch_width",
         )
 
@@ -207,7 +226,7 @@ class PlasmidView(param.Parameterized):
                 '<div style="color:#E74C3C;padding:12px;">'\
                 'Please select at least one part to assemble.</div>'
             )
-            self._add_to_worklist_btn.visible = False
+            self._add_to_wl_section.visible = False
             self._combo_count_pane.object = ""
             return
 
@@ -252,12 +271,15 @@ class PlasmidView(param.Parameterized):
             f'</div></div>'
         )
 
-        self._add_to_worklist_btn.visible = True
+        self._worklist_name_input.value = f"Combinatorial ({selection_summary})"
+        self._add_to_wl_section.visible = True
         logger.info(f"Preview generated for {combo_count} combinations")
 
     def _on_add_to_worklist(self, event: object) -> None:
-        """Generate all combinatorial mRNASequences and add to worklist."""
+        """Generate all combinatorial mRNASequences and create a new worklist."""
         logger.info("Generate & add to worklist button clicked")
+
+        from core.models.worklist import Worklist
 
         # Collect selected parts for each category
         utr5_parts = list(self._utr5_select.value) if self._utr5_select and self._utr5_select.value else [None]
@@ -275,7 +297,7 @@ class PlasmidView(param.Parameterized):
             polya_parts
         )
 
-        sequences_added = 0
+        generated_sequences = []
         for i, (utr5, kozak, cds, utr3, polya) in enumerate(combinations, 1):
             # Build name from parts
             name_parts = []
@@ -292,7 +314,6 @@ class PlasmidView(param.Parameterized):
 
             seq_name = "_".join(name_parts) + f"_v{i}"
 
-            # Create mRNASequence
             seq = mRNASequence(
                 name=seq_name,
                 source="local",
@@ -302,23 +323,26 @@ class PlasmidView(param.Parameterized):
                 three_prime_utr=utr3.sequence if utr3 else None,
                 poly_a=polya.sequence if polya else None,
             )
+            generated_sequences.append(seq)
 
-            # Add to worklist
-            self._state.worklist.add(seq, origin="generated")
-            sequences_added += 1
+        # Create new named worklist
+        name = self._worklist_name_input.value.strip()
+        if not name:
+            name = "Combinatorial Assembly"
 
-        self._state.param.trigger("worklist")
+        new_wl = Worklist(name=name)
+        new_wl.add_many(generated_sequences, origin="generated")
 
-        logger.info(f"Added {sequences_added} assembled sequences to worklist")
+        updated = list(self._state.worklists) + [new_wl]
+        self._state.worklists = updated
+        self._state.active_worklist_index = len(updated) - 1
+        self._state.worklist = new_wl
+        self._state.active_tab = "worklist"
 
-        # Show success message
-        self._state.set_status(f"Generated and added {sequences_added} sequences to worklist")
+        logger.info(f"Created worklist '{name}' with {len(generated_sequences)} sequences")
 
-        # Reset form
-        self._result_pane.object = (
-            f'<div style="color:#10B981;padding:12px;">'\
-            f'✓ Generated and added {sequences_added} sequences to worklist!<br>'\
-            f'You can now find them in the Worklist tab.</div>'
-        )
-        self._add_to_worklist_btn.visible = False
+        self._state.set_status(f"Created worklist '{name}' with {len(generated_sequences)} sequences")
+
+        self._result_pane.object = ""
+        self._add_to_wl_section.visible = False
         self._combo_count_pane.object = ""

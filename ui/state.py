@@ -233,8 +233,15 @@ class AppState(param.Parameterized):
 
     # ── Status helpers ────────────────────────────────────────────────────────
 
-    def set_status(self, message: str) -> None:
-        self.status_message = message
+    def set_status(self, message: str, level: str = "success") -> None:
+        """Show a toast notification. level: 'success', 'info', 'warning', 'error'."""
+        import panel as pn
+        try:
+            notif = pn.state.notifications
+            getattr(notif, level, notif.info)(message, duration=4000)
+        except Exception:
+            # Fallback if notifications not available (e.g., in tests)
+            self.status_message = message
 
     def clear_status(self) -> None:
         self.status_message = ""

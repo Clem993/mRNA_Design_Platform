@@ -408,7 +408,6 @@ class DatabaseImportPanel(param.Parameterized):
                     self._state.worklist = new_worklist
                     self._state.register_db_connection(self._connector, mapper)
                     total_parts = self._state.add_parts_batch(all_candidates)
-                    self._state.show_db_import_modal = False
                     self._state.active_tab = "worklist"
                     self._state.set_status(
                         f"Created worklist '{worklist_name}' with {len(sequences)} sequences. "

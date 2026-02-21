@@ -30,7 +30,6 @@ class RegistrySidebar(param.Parameterized):
     def __init__(self, state: "AppState", **params: object) -> None:
         super().__init__(**params)
         self._state = state
-        self._db_import_panel = None  # Will be set by app.py
 
     def _section_label(self, text: str) -> pn.pane.HTML:
         return pn.pane.HTML(
@@ -146,57 +145,23 @@ class RegistrySidebar(param.Parameterized):
                 margin=0,
             ))
 
-        import_btn = pn.widgets.Button(
-            name="⊕ Import Database",
-            button_type="light",
-            sizing_mode="stretch_width",
-            margin=(6, 8),
-            stylesheets=["""
-                :host .bk-btn {
-                    background: transparent;
-                    color: #6366F1;
-                    border: 1px solid #312E81;
-                    border-radius: 6px;
-                    font-size: 11px;
-                    font-weight: 600;
-                    padding: 6px 12px;
-                }
-                :host .bk-btn:hover {
-                    background: #1E293B;
-                }
-            """],
-        )
-        import_btn.on_click(self._on_import_db)
-        children.append(import_btn)
-
         # ── MODELS section ────────────────────────────────────────────────────
         children.append(self._divider())
         children.append(self._section_label("Models"))
 
-        # Show loaded models with type and source badges
         if self._state.model_registry and len(self._state.model_registry.all_models) > 0:
             for model_reg in self._state.model_registry.all_models:
                 model_name = model_reg.model.name
-                # Type badge
                 if model_reg.model_type == "scoring":
-                    type_color = "#3B82F6"
-                    type_label = "ANALYTICAL"
-                    icon = "📊"
+                    type_color, type_label, icon = "#3B82F6", "ANALYTICAL", "📊"
                 else:
-                    type_color = "#8B5CF6"
-                    type_label = "GENERATIVE"
-                    icon = "🧪"
-                # Source badge
+                    type_color, type_label, icon = "#8B5CF6", "GENERATIVE", "🧪"
                 if model_reg.source == "catalog":
-                    src_color = "#10B981"
-                    src_label = "IMPORTED"
+                    src_color, src_label = "#10B981", "IMPORTED"
                 elif model_reg.source == "api":
-                    src_color = "#F59E0B"
-                    src_label = "API"
+                    src_color, src_label = "#F59E0B", "API"
                 else:
-                    src_color = "#6366F1"
-                    src_label = "BUILTIN"
-                # Repository line
+                    src_color, src_label = "#6366F1", "BUILTIN"
                 repo_line = ""
                 if model_reg.repository:
                     repo_line = (
@@ -223,29 +188,6 @@ class RegistrySidebar(param.Parameterized):
                 sizing_mode="stretch_width",
                 margin=0,
             ))
-
-        browse_model_btn = pn.widgets.Button(
-            name="⊕ Browse Model Repository",
-            button_type="light",
-            sizing_mode="stretch_width",
-            margin=(6, 8),
-            stylesheets=["""
-                :host .bk-btn {
-                    background: transparent;
-                    color: #6366F1;
-                    border: 1px solid #312E81;
-                    border-radius: 6px;
-                    font-size: 11px;
-                    font-weight: 600;
-                    padding: 6px 12px;
-                }
-                :host .bk-btn:hover {
-                    background: #1E293B;
-                }
-            """],
-        )
-        browse_model_btn.on_click(self._on_browse_models)
-        children.append(browse_model_btn)
 
         # ── BACKBONES section ─────────────────────────────────────────────────
         children.append(self._divider())
@@ -311,15 +253,3 @@ class RegistrySidebar(param.Parameterized):
         btn.on_click(_go_to_worklist)
         return btn
 
-    def _on_import_db(self, event: object) -> None:
-        # Close other modals before opening this one
-        self._state.show_model_repo_modal = False
-        self._state.show_analysis_settings_modal = False
-        self._state.show_db_import_modal = True
-
-    def _on_browse_models(self, event: object) -> None:
-        """Open the model repository browser modal."""
-        # Close other modals before opening this one
-        self._state.show_db_import_modal = False
-        self._state.show_analysis_settings_modal = False
-        self._state.show_model_repo_modal = True

@@ -174,10 +174,6 @@ class StudioApp(param.Parameterized):
             (_TAB_NAMES[0], pn.Column(
                 self._status_html,
                 pn.panel(self._worklist.panel),
-                self._seq_modal_container,
-                self._db_modal_container,
-                self._model_modal_container,
-                self._settings_modal_container,
                 sizing_mode="stretch_width",
             )),
             (_TAB_NAMES[1], pn.panel(self._parts.panel)),
@@ -307,6 +303,10 @@ class StudioApp(param.Parameterized):
             theme_toggle=False,
         )
         template.main.append(pn.Column(
+            self._seq_modal_container,
+            self._db_modal_container,
+            self._model_modal_container,
+            self._settings_modal_container,
             self._tabs,
             sizing_mode="stretch_width",
             styles={"overflow-x": "hidden"},

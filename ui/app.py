@@ -22,16 +22,12 @@ logging.basicConfig(
 
 from ui.state import AppState
 from ui.components.sidebar import RegistrySidebar
-from ui.components.sequence_view import SequenceView
-from ui.components.analysis_dashboard import AnalysisDashboard
 from ui.components.worklist_view import WorklistView
-from ui.components.model_runner import ModelRunnerPanel
 from ui.components.db_import import DatabaseImportPanel
 from ui.components.plasmid_view import PlasmidView
 from ui.components.model_repository import ModelRepositoryPanel
 from ui.components.plasmid_assembly import PlasmidAssemblyPanel
 from ui.components.generate_sequences import GenerateSequencesPanel
-from ui.components.analysis_settings import AnalysisSettingsPanel
 
 
 # ── Design tokens ─────────────────────────────────────────────────────────────
@@ -154,16 +150,12 @@ class StudioApp(param.Parameterized):
         super().__init__(**params)
         self.state = AppState()
         self._sidebar_comp  = RegistrySidebar(self.state)
-        self._seq_view      = SequenceView(self.state)
-        self._analysis      = AnalysisDashboard(self.state)
         self._worklist      = WorklistView(self.state)
-        self._models        = ModelRunnerPanel(self.state)
         self._db_import     = DatabaseImportPanel(self.state)
         self._parts         = PlasmidView(self.state)
         self._model_repo    = ModelRepositoryPanel(self.state)
         self._assembly      = PlasmidAssemblyPanel(self.state)
         self._generate      = GenerateSequencesPanel(self.state)
-        self._analysis_settings = AnalysisSettingsPanel(self.state)
 
         # ── Build persistent widgets once ─────────────────────────────────────
         self._tabs = pn.Tabs(

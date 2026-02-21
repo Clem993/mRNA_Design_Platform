@@ -16,6 +16,7 @@ import param
 
 if TYPE_CHECKING:
     from ui.state import AppState
+    from ui.components.analysis_settings import AnalysisSettingsPanel
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,10 @@ class WorklistView(param.Parameterized):
         self._state = state
         self._table_widget = None
         self._create_wl_section = pn.Column(visible=False, sizing_mode="stretch_width")
+        self._settings_visible = False
+        self._settings_section = pn.Column(visible=False, sizing_mode="stretch_width")
+        # Lazy-init settings panel on first toggle
+        self._settings_panel: "AnalysisSettingsPanel | None" = None
 
     def _to_dataframe(self) -> pd.DataFrame:
         wl = self._state.worklist
@@ -116,9 +121,12 @@ class WorklistView(param.Parameterized):
             """],
         )
         def _open_settings(e):
-            self._state.show_db_import_modal = False
-            self._state.show_model_repo_modal = False
-            self._state.show_analysis_settings_modal = True
+            self._settings_visible = not self._settings_visible
+            if self._settings_visible and self._settings_panel is None:
+                from ui.components.analysis_settings import AnalysisSettingsPanel
+                self._settings_panel = AnalysisSettingsPanel(self._state)
+                self._settings_section.append(self._settings_panel.panel())
+            self._settings_section.visible = self._settings_visible
         settings_btn.on_click(_open_settings)
 
         # Create worklist from selection button
@@ -208,7 +216,7 @@ class WorklistView(param.Parameterized):
                     item = next((i for i in wl.items if i.id == item_id), None)
                     if item:
                         self._state.active_sequence = item.sequence
-                        self._state.show_sequence_modal = True
+                        logger.debug("Row clicked: %s", item.sequence.name)
 
             table_widget.on_click(on_row_click)
 
@@ -244,6 +252,7 @@ class WorklistView(param.Parameterized):
 
         return pn.Column(
             toolbar,
+            self._settings_section,
             self._create_wl_section,
             pn.pane.HTML(f'<div style="margin-bottom:8px;">{origin_chips}</div>') if origin_chips else pn.pane.HTML(""),
             table_or_empty,
@@ -278,7 +287,6 @@ class WorklistView(param.Parameterized):
         self._state.worklists = worklists
         self._state.active_worklist_index = len(worklists) - 1
         self._state.worklist = new_wl
-        self._state.param.trigger("worklist")
         self._state.set_status(f"Created worklist '{name}' with {new_wl.count} sequences")
 
     def _export_csv(self, event: object) -> None:

@@ -89,14 +89,8 @@ class AppState(param.Parameterized):
     generation_settings: Dict[str, Any] = param.Dict(default={}, doc="Sequence generation settings")
 
     # ── UI state ─────────────────────────────────────────────────────────────
-    active_tab: str = param.String(default="worklist", doc="Active main panel tab")
-    status_message: str = param.String(default="", doc="Status bar message")
+    active_tab: str = param.String(default="import_db", doc="Active main panel tab")
     is_loading: bool = param.Boolean(default=False, doc="Global loading indicator")
-    show_sequence_modal: bool = param.Boolean(default=False, doc="Show sequence inspection modal")
-    show_db_import_modal: bool = param.Boolean(default=False, doc="Show database import modal")
-    show_model_repo_modal: bool = param.Boolean(default=False, doc="Show model repository modal")
-    show_analysis_settings_modal: bool = param.Boolean(default=False, doc="Show analysis settings modal")
-    show_backbone_import_modal: bool = param.Boolean(default=False, doc="Show backbone import modal")
 
     def __init__(self, **params: Any) -> None:
         if "worklist" not in params:
@@ -241,7 +235,4 @@ class AppState(param.Parameterized):
             getattr(notif, level, notif.info)(message, duration=4000)
         except Exception:
             # Fallback if notifications not available (e.g., in tests)
-            self.status_message = message
-
-    def clear_status(self) -> None:
-        self.status_message = ""
+            logger.info("Status: %s", message)

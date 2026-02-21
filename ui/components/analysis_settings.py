@@ -396,7 +396,6 @@ class AnalysisSettingsPanel(param.Parameterized):
         apply_btn = pn.widgets.Button(name="Apply & Close", button_type="success", width=150, margin=(8, 8))
 
         def on_apply(event):
-            self._state.show_analysis_settings_modal = False
             self._state.set_status("Analysis settings updated")
 
         apply_btn.on_click(on_apply)

@@ -56,22 +56,6 @@ class PlasmidAssemblyPanel(param.Parameterized):
             width=250,
         )
 
-        import_backbone_btn = pn.widgets.Button(
-            name="⊕ Import Backbone",
-            button_type="light",
-            width=150,
-            margin=(20, 4, 4, 4),
-            stylesheets=["""
-                :host .bk-btn {
-                    font-size: 11px;
-                    color: #6366F1;
-                    border: 1px solid #312E81;
-                    border-radius: 4px;
-                }
-            """],
-        )
-        import_backbone_btn.on_click(self._on_import_backbone)
-
         backbone_info = pn.pane.HTML("", sizing_mode="stretch_width")
 
         def update_backbone_info(event):
@@ -106,7 +90,7 @@ class PlasmidAssemblyPanel(param.Parameterized):
 
         backbone_section = pn.Column(
             pn.pane.HTML('<div style="font-size:14px;font-weight:700;color:#0F172A;margin-bottom:4px;">1. Select Backbone</div>'),
-            pn.Row(backbone_select, import_backbone_btn),
+            backbone_select,
             backbone_info,
             sizing_mode="stretch_width",
             styles={"background": "#FFFFFF", "padding": "12px", "border-radius": "6px", "border": "1px solid #E2E8F0"},
@@ -256,10 +240,6 @@ class PlasmidAssemblyPanel(param.Parameterized):
             sizing_mode="stretch_width",
             styles={"padding": "8px 16px"},
         )
-
-    def _on_import_backbone(self, event) -> None:
-        """Show backbone import modal."""
-        self._state.show_backbone_import_modal = True
 
     def _run_assembly(self, backbone, strategy, gg_enzyme, gibson_overlap, re_5, re_3) -> None:
         """Run assembly workflow."""

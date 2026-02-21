@@ -14,8 +14,6 @@ from typing import TYPE_CHECKING
 import panel as pn
 import param
 
-from models.base import APIScoringModel, APIGenerativeModel
-
 if TYPE_CHECKING:
     from ui.state import AppState
 

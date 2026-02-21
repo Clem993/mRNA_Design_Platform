@@ -165,10 +165,23 @@ class StudioApp(param.Parameterized):
 
         # ── Build persistent widgets once ─────────────────────────────────────
         self._status_html = pn.pane.HTML("", height=0, margin=0, sizing_mode="stretch_width")
+
+        # Modal containers — simple visibility toggle, no CSS overlay tricks
         self._seq_modal_container = pn.Column(visible=False, sizing_mode="stretch_width")
         self._db_modal_container = pn.Column(visible=False, sizing_mode="stretch_width")
         self._model_modal_container = pn.Column(visible=False, sizing_mode="stretch_width")
         self._settings_modal_container = pn.Column(visible=False, sizing_mode="stretch_width")
+
+        # Modals sit above tab content — they're only visible when open, so
+        # on other tabs they collapse to zero height (visible=False).
+        self._modal_layer = pn.Column(
+            self._seq_modal_container,
+            self._db_modal_container,
+            self._model_modal_container,
+            self._settings_modal_container,
+            sizing_mode="stretch_width",
+            margin=0,
+        )
 
         self._tabs = pn.Tabs(
             (_TAB_NAMES[0], pn.Column(
@@ -303,10 +316,7 @@ class StudioApp(param.Parameterized):
             theme_toggle=False,
         )
         template.main.append(pn.Column(
-            self._seq_modal_container,
-            self._db_modal_container,
-            self._model_modal_container,
-            self._settings_modal_container,
+            self._modal_layer,
             self._tabs,
             sizing_mode="stretch_width",
             styles={"overflow-x": "hidden"},

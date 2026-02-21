@@ -1,0 +1,260 @@
+"""
+Creates the demo SQLite database: demo/mrna_parts.db
+
+Tables
+------
+mrna_sequences  — main parts registry (mix of full mRNA and component records)
+plasmid_backbones — a few cloning vectors
+
+Run:  python demo/create_demo_db.py
+"""
+import sqlite3
+import os
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "mrna_parts.db")
+
+# ── Sequences are realistic-length DNA (T not U), all valid reading frames ──
+
+# Human beta-globin 5'UTR (commonly used in mRNA therapeutics)
+UTR5_BETAGLOBIN = (
+    "ACATTTGCTTCTGACACAACTGTGTTCACTAGCAACCTCAAACAGACACCATGGTGCATCTGAC"
+    "TCCTGAGGAGAAGTCTGCCGTTACTGCCCTGTGGGGCAAGGTGAACGTGGATGAAGTTGGTGGT"
+)[:80]
+
+# EMCV IRES-derived 5'UTR (used in bicistronic vectors)
+UTR5_EMCV = (
+    "GGGAAATAAGAGAGAAAAGAAGAGTAAGAAGAAATATAAGAGCCACCATG"
+)
+
+# Tobacco etch virus (TEV) minimal Kozak context
+KOZAK_TEV  = "GCCACC"
+
+# Human beta-globin 3'UTR
+UTR3_BETAGLOBIN = (
+    "GCTCGCTTTCTTGCTGTCCAATTTCTATTAAAGGTTCCTTTGTTCCCTAAGTCCAACTACTA"
+    "AACTGGGGGATATTATGAAGGGCCTTGAGCATCTGGATTCTGCCTAATAAAAAACATTTATT"
+    "TTCATTGCAATGATGTATTTAAATTATTTCTGAATATTTTACTAAAAATAAATGTTTTTTAT"
+)[:100]
+
+# Human albumin 3'UTR (strong, widely used)
+UTR3_ALBUMIN = (
+    "AATAAAGATCTTTATTTTCATTAGATCTGTGTGTTGGTTTTTTGTGTGAATCGATAGTACTA"
+    "AATACTTTTCAGACACCAGAAATGCAGAGCAGTTCAGAGGCAGAGCCATCTATTGCTTACAT"
+)[:100]
+
+# Poly-A tail
+POLYA_120 = "A" * 120
+POLYA_60  = "A" * 60
+
+# ── CDS sequences — all start ATG, end stop codon, in-frame ──────────────────
+
+# eGFP (enhanced Green Fluorescent Protein) — 720 nt human-codon-optimized
+CDS_EGFP = (
+    "ATGGTGAGCAAGGGCGAGGAGCTGTTCACCGGGGTGGTGCCCATCCTGGTCGAGCTGGACGGCGACGTAAACGGCCACAAGTTCAGCGTGTCCGGCGAGGGCGAGGGCGATGCCACCTACGGCAAGCTGACCCTGAAGTTCATCTGCACCACCGGCAAGCTGCCCGTGCCCTGGCCCACCCTCGTGACCACCCTGACCTACGGCGTGCAGTGCTTCAGCCGCTACCCCGACCACATGAAGCAGCACGACTTCTTCAAGTCCGCCATGCCCGAAGGCTACGTCCAGGAGCGCACCATCTTCTTCAAGGACGACGGCAACTACAAGACCCGCGCCGAGGTGAAGTTCGAGGGCGACACCCTGGTGAACCGCATCGAGCTGAAGGGCATCGACTTCAAGGAGGACGGCAACATCCTGGGGCACAAGCTGGAGTACAACTACAACAGCCACAACGTCTATATCATGGCCGACAAGCAGAAGAACGGCATCAAGGTGAACTTCAAGATCCGCCACAACATCGAGGACGGCAGCGTGCAGCTCGCCGACCACTACCAGCAGAACACCCCCATCGGCGACGGCCCCGTGCTGCTGCCCGACAACCACTACCTGAGCACCCAGTCCGCCCTGAGCAAAGACCCCAACGAGAAGCGCGATCACATGGTCCTGCTGGAGTTCGTGACCGCCGCCGGGATCACTCTCGGCATGGACGAGCTGTACAAG"
+    "TAA"  # stop codon
+)
+
+# mCherry CDS — 711 nt, codon-optimized for human
+CDS_MCHERRY = (
+    "ATGGTGAGCAAGGGCGAGGAGGATAACATGGCCATCATCAAGGAGTTCATGCGCTTCAAGGTGCACATGGAGGGCTCCGTGAACGGCCACGAGTTCGAGATCGAGGGCGAGGGCGAGGGCCGCCCCTACGAGGGCACCCAGACCGCCAAGCTGAAGGTGACCAAGGGTGGCCCCCTGCCCTTCGCCTGGGACATCCTGTCCCCTCAGTTCATGTACGGCTCCAAGGCCTACGTGAAGCACCCCGCCGACATCCCCGACTACTTGAAGCTGTCCTTCCCCGAGGGCTTCAAGTGGGAGCGCGTGATGAACTTCGAGGACGGCGGCGTGGTGACCGTGACCCAGGACTCCTCCCTGCAGGACGGCGAGTTCATCTACAAGGTGAAGCTGCGCGGCACCAACTTCCCCTCCGACGGCCCCGTAATGCAGAAGAAGACCATGGGCTGGGAGGCCTCCTCCGAGCGGATGTACCCCGAGGACGGCGCCCTGAAGGGCGAGATCAAGCAGAGGCTGAAGCTGAAGGACGGCGGCCACTACGACGCTGAGGTCAAGACCACCTACAAGGCCAAGAAGCCCGTGCAGCTGCCCGGCGCCTACAACGTCAACATCAAGTTGGACATCACCTCCCACAACGAGGACTACACCATCGTGGAACAGTACGAACGCGCCGAGGGCCGCCACTCCACCGGCGGCATGGACGAGCTGTACAAG"
+    "TAA"
+)
+
+# Firefly luciferase — human codon-optimized excerpt (900 nt out of full ~1650)
+CDS_LUC2 = (
+    "ATGGAAGATGCCAAAAACATTAAGAAGGGCCCAGCGCCATTCTACCCACTCGAAGACGGGAC"
+    "CGCCGGCGAGCAGCTGCACAAAGCCATGAAGCGCTACGCCCTGGTGCCCGGCACCATCGCCT"
+    "TTACCGACGCACATATCGAGGTGGACATTACCTACGCCGAGTACTTCGAGATGAGCGTTCGG"
+    "CTGGCAGAAGCTATGAAGCGCTATGGGCTGAATACAAACCATCGGATCGTGGTGTGCAGCGA"
+    "GAATAGTCTGGAGAAGATCCTGCTGAACAAAGGCCTGCCTGTAGCCGGCCTTTTCCTCCTGG"
+    "AAGAGCTGCGGCAGCAGTTCCAGAAGGCCCGGGAGCAGATGTTCACCTTCGTGCTCGATCTG"
+    "GAGGAAATGACCGCCGAAGAGGCGATTGAGAATCTGGTATTCGAGCAGTATGGAATCGACCA"
+    "TTATCTTGATAACCCACAATGCCTGCATGACCTGGTGCATCTGGAACCCCGAGGTCAATGTG"
+    "GAAGAGTTCCTGGAAAAGCTGCTGAAGGACGGTATCATCATGTTCAGCATCCATGGTTATGG"
+    "CTACATCCTGGGGCCCGGAACCAACTTCGATCTGGAGCGCATGATCAAGCGCGATGGGGAG"
+    "GTGGATATGGCCCTGATTAAGGTGTCGATGGAGCAGGCCGGCATCGACCCCGATGAGGCCGG"
+    "AGCCATTCGGCTGTACAAGCTGATGAAGGATAAG"
+    "TAA"
+)[:900]
+# Pad to make divisible by 3
+while len(CDS_LUC2) % 3 != 0:
+    CDS_LUC2 = CDS_LUC2[:-3] + "TAA"
+
+# Truncated Spike RBD (SARS-CoV-2) — synthetic, codon-optimized excerpt
+CDS_SPIKE_RBD = (
+    "ATGTTCGTGTTCCTGGTGCTGCTGCCCCTGGTGTCCTCCCAGGTGTGCAACCTGACCACCAG"
+    "AACCCAGCTGCCCCCCGCCTACACCAACTCCTTCACCCGGGGCGTGTACTACCCCGACAAGG"
+    "TGTTCCGCTCCTCCGTGCTGCACTCCACCCAGGACCTGTTTCTGCCCTTTTTCTCCAACGTG"
+    "ACCTGGTTCCACGCCATCCACGTGTCCGGCACCAACGGCACAAAGCGGTTCGACAACCCCGTG"
+    "CTGCCCTTCAACGACGGGGTGTACTTTGCCAGCACCGAGAAGTCCAACATCATCCGGGGCTG"
+    "GATCTTCGGCACCACCCTGGACTCCAAGACCCAGTCCCTGCTGATCGTGAACAACGCCACCA"
+    "ACGTGGTCATCAAGGTGTGCGAGTTCCAGTTCTGCAACGACCCCTTCCTGGGCGTCTACTAC"
+    "CACAAGAACAACAAGTCCTGGATGGAGTCCGAGTTCCGGGTGTACTCCTCCGCCAACAACTG"
+    "CACCTTTGAGTACGTGTCCCAGCCCTTTCTGATGGACCTGGAGGGCAAACAGGGCAACTTCA"
+    "AGAACCTGCGCGAGTTTGTGTTTAAGAACATCGACGGCTACTTCAAGATCTACAGCAAGCAC"
+)
+# Ensure divisible by 3 with stop codon
+CDS_SPIKE_RBD = CDS_SPIKE_RBD[:len(CDS_SPIKE_RBD) - len(CDS_SPIKE_RBD) % 3]
+CDS_SPIKE_RBD = CDS_SPIKE_RBD[:-3] + "TAA"  # replace last codon with stop
+
+# EPO (Erythropoietin) CDS — synthetic excerpt
+CDS_EPO = (
+    "ATGGGGGTGCACGAATGTCCCGCCTGGCTGTGGCTGCTGCTGTCGCTGCCGTTCTCTGTGCT"
+    "GCCCGCCCGCGCCGTCCTCACCGTCAACTTCCCGCACCCTGCTTCCACGCCTCAGAGTCCTG"
+    "GAGAGGTACCTCTTGGAGGCCAAGGAGGCCGAGAATATCACGACGGGCTGTGCTGAACACTGC"
+    "AGCTTGAATGAGAATATCACGGTGCGCTTTCCACGCCTCATTTGCGACAGCTTTGTTCGTGG"
+    "TCAGGCCGTGGTCAGCTCCGATGAGGTCTTCAGGGCCCCTGTCCTCCTGCAGCTGGAATCCT"
+    "GGCAGCGTCTCAGCCCCTGCAGCCAGCCCTCCCAGCTGCCCTCAGCCACCTGTCCCGCCTGCT"
+    "CCAGAGCCTGGAGAACTTCTACCAGCCTCTGGAGCAGCTCCAGGAAGTGATCCAGGAGATGAG"
+    "CAAGCTGTCCGCCACGGCCGTGGAGGTCTTGGCCAGTAAGCCGGAG"
+    "TAA"
+)
+# Truncate to multiples of 3
+CDS_EPO = CDS_EPO[:len(CDS_EPO) - len(CDS_EPO) % 3]
+if not CDS_EPO.endswith("TAA") and not CDS_EPO.endswith("TAG") and not CDS_EPO.endswith("TGA"):
+    CDS_EPO = CDS_EPO[:-3] + "TAA"
+
+# hFIX (Factor IX) — synthetic
+CDS_FIX = (
+    "ATGCAGCGCGTGAACATGATCATGGCCTCCCTGTGGCTGTGCTTCGTGGCCCTGTGGCAGGC"
+    "TGGCAACCCCAGAGAAGTACCTGTTCAAGAACGGCGACCAGCGGCCCAACAAGGAGATCCCCA"
+    "AGAGCATCATCCTGGAGGAGTTCAAGGCCTTCTTCTCCACCTTCATCAACCGGAAGATGATCA"
+    "AGCAGACCGACAAAGACCAGGTGATCAGCCTGGGCGGCAAGGACCAGGTGCTGATCCAGATGC"
+    "AGCCCCAGGTGAGCAAGGACTTTGGCTTCAGCCTGTGCACCTGCCCCTGGGGCCACCCCAGCC"
+    "CCTGCAGCAGCACATCCTGTACTTCCTGAACCAGAAGGCCAAACAGTTCCTGCTGCAGGACGAG"
+    "AAGGTGAAGGGCATCAACCACTGCAAGGTGCGGGTGGCCCTGGAGCAGGACGGCAGCAAGGTG"
+)
+CDS_FIX = CDS_FIX[:len(CDS_FIX) - len(CDS_FIX) % 3]
+CDS_FIX = CDS_FIX[:-3] + "TAA"
+
+# ── Full mRNA sequences (some customers store it monolithic) ──────────────────
+
+FULL_MRNA_EGFP = UTR5_BETAGLOBIN + KOZAK_TEV + "ATG" + CDS_EGFP[3:] + UTR3_BETAGLOBIN + POLYA_120
+FULL_MRNA_MCHERRY = UTR5_EMCV + CDS_MCHERRY + UTR3_ALBUMIN + POLYA_60
+
+# ── Sequences table data ───────────────────────────────────────────────────────
+
+SEQUENCES = [
+    # id, gene_name, five_prime_utr, cds, three_prime_utr, poly_a_tail,
+    # target_protein, organism, expression_system, gc_target, notes
+    (1, "eGFP-hBG-UTRs", UTR5_BETAGLOBIN, CDS_EGFP, UTR3_BETAGLOBIN, POLYA_120,
+     "Enhanced GFP", "Aequorea victoria", "HEK293T", 52.4,
+     "Human beta-globin UTRs. Classic reporter construct for mRNA transfection."),
+
+    (2, "mCherry-AlbUTR", UTR5_BETAGLOBIN, CDS_MCHERRY, UTR3_ALBUMIN, POLYA_120,
+     "mCherry red fluorescent protein", "Discosoma sp.", "CHO", 50.1,
+     "Albumin 3'UTR for extended expression. Good cell viability."),
+
+    (3, "Luc2-reporter", UTR5_EMCV, CDS_LUC2, UTR3_ALBUMIN, POLYA_60,
+     "Firefly luciferase", "Photinus pyralis", "Huh-7", 53.8,
+     "Bioluminescence reporter. Used for LNP screening."),
+
+    (4, "SpRBD-v1", UTR5_BETAGLOBIN, CDS_SPIKE_RBD, UTR3_ALBUMIN, POLYA_120,
+     "SARS-CoV-2 Spike RBD", "SARS-CoV-2", "HEK293T", 55.2,
+     "Vaccine antigen candidate. Proline-stabilized RBD."),
+
+    (5, "EPO-therapeutic", UTR5_BETAGLOBIN, CDS_EPO, UTR3_BETAGLOBIN, POLYA_120,
+     "Erythropoietin", "Homo sapiens", "HepG2", 58.0,
+     "Therapeutic candidate for anemia. Glycosylation motifs retained."),
+
+    (6, "hFIX-codon-opt", UTR5_BETAGLOBIN, CDS_FIX, UTR3_ALBUMIN, POLYA_120,
+     "Coagulation Factor IX", "Homo sapiens", "HepG2", 56.3,
+     "Hemophilia B gene therapy candidate. Codon-optimized for liver expression."),
+
+    # Records stored as full_mrna (no component breakdown) — different schema
+    (7, "eGFP-full-v2", None, None, None, None,
+     "eGFP monolithic record", "Aequorea victoria", "in vitro", 51.9,
+     "Archive record — stored as assembled mRNA sequence."),
+
+    (8, "mCherry-EMCV-full", None, None, None, None,
+     "mCherry EMCV", "Discosoma sp.", "Jurkat", 49.7,
+     "EMCV IRES-driven construct. Full sequence stored."),
+]
+
+# full_mrna is only for rows 7 and 8
+FULL_MRNA = {
+    7: FULL_MRNA_EGFP,
+    8: FULL_MRNA_MCHERRY,
+}
+
+# ── Plasmid backbones ─────────────────────────────────────────────────────────
+
+# pUC19 minimal cloning region (stub — real pUC19 is 2686 bp)
+BACKBONE_PUC19 = "ATGACCATGATTACGCCAAGCTTGCATGCCTGCAGGTCGACGGATCCCCGGGAATTCGAGCTC" + "GCTAGC" * 40
+BACKBONE_CMV = "GGTACCGAGCTCGAATTCGTAATCATGGTCATAGCTGTTTCCTGTGTGAAATTGTTATCCGCT" + "AAGCTT" * 40
+
+BACKBONES = [
+    (1, "pUC19-MCS", BACKBONE_PUC19,
+     "EcoRI,HindIII,BamHI,SalI,PstI,SphI",
+     "Classic E. coli cloning vector. AmpR. lacZ alpha complementation."),
+
+    (2, "pCMV-MCS", BACKBONE_CMV,
+     "EcoRI,HindIII,XhoI,NheI,NotI",
+     "Mammalian expression vector. CMV promoter. BGH poly-A signal."),
+]
+
+# ── Build the database ─────────────────────────────────────────────────────────
+
+def create() -> None:
+    if os.path.exists(DB_PATH):
+        os.remove(DB_PATH)
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
+    c.execute("""
+        CREATE TABLE mrna_sequences (
+            id                INTEGER PRIMARY KEY,
+            gene_name         TEXT    NOT NULL,
+            five_prime_utr    TEXT,
+            cds               TEXT,
+            three_prime_utr   TEXT,
+            poly_a_tail       TEXT,
+            full_mrna         TEXT,
+            target_protein    TEXT,
+            organism          TEXT,
+            expression_system TEXT,
+            gc_target_percent REAL,
+            notes             TEXT
+        )
+    """)
+
+    for row in SEQUENCES:
+        (rid, name, utr5, cds, utr3, polya,
+         protein, organism, expsys, gc, notes) = row
+        full = FULL_MRNA.get(rid)
+        c.execute("""
+            INSERT INTO mrna_sequences VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (rid, name, utr5, cds, utr3, polya, full,
+              protein, organism, expsys, gc, notes))
+
+    c.execute("""
+        CREATE TABLE plasmid_backbones (
+            id           INTEGER PRIMARY KEY,
+            name         TEXT,
+            sequence     TEXT,
+            cloning_sites TEXT,
+            description  TEXT
+        )
+    """)
+
+    for row in BACKBONES:
+        c.execute("INSERT INTO plasmid_backbones VALUES (?,?,?,?,?)", row)
+
+    conn.commit()
+    conn.close()
+
+    print(f"✓ Created demo database: {DB_PATH}")
+    print(f"  mrna_sequences : {len(SEQUENCES)} records")
+    print(f"  plasmid_backbones: {len(BACKBONES)} records")
+
+    # Quick validation
+    conn2 = sqlite3.connect(DB_PATH)
+    count = conn2.execute("SELECT COUNT(*) FROM mrna_sequences").fetchone()[0]
+    conn2.close()
+    assert count == len(SEQUENCES), "Row count mismatch!"
+    print("  ✓ Validation passed")
+
+
+if __name__ == "__main__":
+    create()

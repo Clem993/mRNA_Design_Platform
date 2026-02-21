@@ -60,8 +60,39 @@ def _component_track_html(seq: mRNASequence) -> str:
     return f'<div style="overflow-x:auto;">{svg}{ticks}</div>'
 
 
+def _derive_component_name(seq: mRNASequence, component_type: str) -> str:
+    """Derive a descriptive name for a component from sequence metadata."""
+    meta = seq.raw_metadata or {}
+    seq_name = seq.name or ""
+
+    if component_type == "CDS":
+        # Try target_protein or gene name
+        protein = meta.get("target_protein") or meta.get("protein") or meta.get("gene")
+        if protein:
+            return f"{component_type}: {protein}"
+        return f"{component_type}: {seq_name}"
+    elif component_type == "5' UTR":
+        # Look for UTR-specific metadata
+        utr_name = meta.get("utr5_name") or meta.get("five_prime_utr_name")
+        if utr_name:
+            return f"{component_type}: {utr_name}"
+        return f"{component_type} ({seq_name})"
+    elif component_type == "3' UTR":
+        utr_name = meta.get("utr3_name") or meta.get("three_prime_utr_name")
+        if utr_name:
+            return f"{component_type}: {utr_name}"
+        return f"{component_type} ({seq_name})"
+    elif component_type == "Kozak":
+        return f"{component_type} ({seq_name})"
+    elif component_type == "Poly-A":
+        return f"{component_type} ({seq_name})"
+    elif component_type == "Full mRNA":
+        return f"{component_type}: {seq_name}"
+    return component_type
+
+
 def _component_fields_html(seq: mRNASequence) -> str:
-    """Render component sequences in labelled code blocks."""
+    """Render component sequences in labelled code blocks with specific names."""
     components = [
         ("5' UTR", seq.five_prime_utr),
         ("Kozak", seq.kozak),
@@ -74,13 +105,14 @@ def _component_fields_html(seq: mRNASequence) -> str:
     for label, value in components:
         if not value:
             continue
+        display_name = _derive_component_name(seq, label)
         preview = value[:120] + ("…" if len(value) > 120 else "")
         color = _COMPONENT_COLORS.get(label.replace(" ", ""), "#BDC3C7")
         blocks.append(f"""
         <div style="margin-bottom:10px;">
             <div style="font-size:11px;font-weight:700;color:{color};
                         text-transform:uppercase;letter-spacing:1px;
-                        margin-bottom:3px;">{label}</div>
+                        margin-bottom:3px;">{display_name}</div>
             <div style="font-family:monospace;font-size:11px;background:#F8F9FA;
                         border:1px solid #E9ECEF;border-radius:4px;padding:6px 8px;
                         word-break:break-all;color:#2C3E50;">{preview}</div>
@@ -109,7 +141,7 @@ class SequenceView(param.Parameterized):
                 )
             )
 
-        # Header
+        # Header with metadata
         source_badge = (
             '<span style="background:#2ECC71;color:white;border-radius:3px;'
             'padding:2px 6px;font-size:10px;font-weight:700;">LOCAL</span>'
@@ -117,13 +149,58 @@ class SequenceView(param.Parameterized):
             f'<span style="background:#3498DB;color:white;border-radius:3px;'
             f'padding:2px 6px;font-size:10px;font-weight:700;">DB: {seq.db_source}</span>'
         )
+
+        # Show key metadata fields
+        meta = seq.raw_metadata or {}
+        meta_badges = ""
+        protein = meta.get("target_protein") or meta.get("protein")
+        organism = meta.get("organism")
+        expr_sys = meta.get("expression_system")
+        if protein:
+            meta_badges += (
+                f'<span style="background:#10B98133;color:#10B981;border-radius:3px;'
+                f'padding:2px 6px;font-size:10px;font-weight:600;">{protein}</span> '
+            )
+        if organism:
+            meta_badges += (
+                f'<span style="background:#8B5CF633;color:#8B5CF6;border-radius:3px;'
+                f'padding:2px 6px;font-size:10px;font-weight:600;">{organism}</span> '
+            )
+        if expr_sys:
+            meta_badges += (
+                f'<span style="background:#F59E0B33;color:#F59E0B;border-radius:3px;'
+                f'padding:2px 6px;font-size:10px;font-weight:600;">{expr_sys}</span> '
+            )
+
+        # Component summary line
+        component_parts = []
+        if seq.five_prime_utr:
+            component_parts.append("5'UTR")
+        if seq.kozak:
+            component_parts.append("Kozak")
+        if seq.cds:
+            component_parts.append("CDS")
+        if seq.three_prime_utr:
+            component_parts.append("3'UTR")
+        if seq.poly_a:
+            component_parts.append("PolyA")
+        if seq.full_mrna and not component_parts:
+            component_parts.append("Full mRNA")
+        components_str = " + ".join(component_parts) if component_parts else "No components"
+
         header_html = f"""
         <div style="padding:16px 0 8px 0;">
             <div style="font-size:20px;font-weight:800;">{seq.name}</div>
-            <div style="margin-top:4px;display:flex;gap:8px;align-items:center;">
+            <div style="margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                 {source_badge}
                 <span style="font-size:12px;color:#7F8C8D;">{seq.length} nt total</span>
                 <span style="font-size:12px;color:#7F8C8D;">ID: {seq.id[:8]}…</span>
+            </div>
+            <div style="margin-top:6px;display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+                {meta_badges}
+            </div>
+            <div style="margin-top:4px;font-size:11px;color:#64748B;">
+                Components: {components_str}
             </div>
         </div>
         """

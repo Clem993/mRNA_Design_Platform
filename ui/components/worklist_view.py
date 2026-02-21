@@ -40,7 +40,6 @@ class WorklistView(param.Parameterized):
                 "Source": seq.source,
                 "Length (nt)": seq.length,
                 "Origin": item.origin,
-                "Status": item.status,
             }
 
             # Add base analysis metrics if available
@@ -64,7 +63,7 @@ class WorklistView(param.Parameterized):
             row["Notes"] = item.notes or ""
             rows.append(row)
         return pd.DataFrame(rows) if rows else pd.DataFrame(
-            columns=["Name", "Source", "Length (nt)", "Origin", "Status", "GC%", "CAI"]
+            columns=["Name", "Source", "Length (nt)", "Origin", "GC%", "CAI"]
         )
 
     @param.depends("_state.worklist", "_state.model_registry")
@@ -116,7 +115,11 @@ class WorklistView(param.Parameterized):
                 }
             """],
         )
-        settings_btn.on_click(lambda e: setattr(self._state, "show_analysis_settings_modal", True))
+        def _open_settings(e):
+            self._state.show_db_import_modal = False
+            self._state.show_model_repo_modal = False
+            self._state.show_analysis_settings_modal = True
+        settings_btn.on_click(_open_settings)
 
         # Create worklist from selection button
         create_wl_btn = pn.widgets.Button(

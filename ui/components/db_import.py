@@ -9,6 +9,9 @@ Lets the user:
 """
 from __future__ import annotations
 
+import logging
+import os
+import time
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 import pandas as pd
@@ -20,6 +23,23 @@ from core.database.base import SEQUENCE_FIELDS
 
 if TYPE_CHECKING:
     from ui.state import AppState
+
+logger = logging.getLogger(__name__)
+
+
+def _log_resources(label: str) -> None:
+    """Log current process memory and CPU usage."""
+    try:
+        import psutil
+        proc = psutil.Process(os.getpid())
+        mem = proc.memory_info()
+        logger.info(
+            f"[PERF] {label} | RSS={mem.rss / 1024 / 1024:.1f}MB "
+            f"VMS={mem.vms / 1024 / 1024:.1f}MB "
+            f"CPU={proc.cpu_percent(interval=None):.1f}%"
+        )
+    except ImportError:
+        pass  # psutil not available
 
 
 _BACKEND_OPTIONS = ["SQLite", "PostgreSQL", "CSV / Excel"]
@@ -229,6 +249,8 @@ class DatabaseImportPanel(param.Parameterized):
         self._mapping_section.append(self._build_mapping_form())
 
     def _on_connect(self, event: object) -> None:
+        t_start = time.perf_counter()
+        _log_resources("connect:start")
         backend = self._backend_select.value
         name = self._display_name.value or f"conn_{len(self._state.db_connections)+1}"
 
@@ -254,14 +276,26 @@ class DatabaseImportPanel(param.Parameterized):
             params=params,
         )
         try:
+            t0 = time.perf_counter()
             connector = create_connector(config)
+            logger.info(f"[PERF] create_connector took {time.perf_counter()-t0:.4f}s")
+
+            t0 = time.perf_counter()
             connector.connect()
+            logger.info(f"[PERF] connector.connect() took {time.perf_counter()-t0:.4f}s")
+
             self._connector = connector
             self._status_pane.object = (
                 f'<div style="color:#10B981;font-size:12px;margin-top:4px;">'
                 f'✓ Connected to {name}</div>'
             )
+
+            t0 = time.perf_counter()
             self._refresh_table_section()
+            logger.info(f"[PERF] _refresh_table_section took {time.perf_counter()-t0:.4f}s")
+
+            _log_resources("connect:end")
+            logger.info(f"[PERF] Total _on_connect took {time.perf_counter()-t_start:.4f}s")
         except Exception as e:
             self._status_pane.object = (
                 f'<div style="color:#EF4444;font-size:12px;margin-top:4px;">'
@@ -272,11 +306,25 @@ class DatabaseImportPanel(param.Parameterized):
         if not self._connector:
             return
         table = self._table_select.value
+        t_start = time.perf_counter()
+        _log_resources("preview:start")
         try:
+            t0 = time.perf_counter()
             self._preview_df = self._connector.get_records(table, limit=50)
+            logger.info(f"[PERF] get_records(limit=50) took {time.perf_counter()-t0:.4f}s, "
+                        f"shape={self._preview_df.shape}")
             self._columns = list(self._preview_df.columns)
+
+            t0 = time.perf_counter()
             self._refresh_preview_section()
+            logger.info(f"[PERF] _refresh_preview_section took {time.perf_counter()-t0:.4f}s")
+
+            t0 = time.perf_counter()
             self._refresh_mapping_section()
+            logger.info(f"[PERF] _refresh_mapping_section took {time.perf_counter()-t0:.4f}s")
+
+            _log_resources("preview:end")
+            logger.info(f"[PERF] Total _on_preview took {time.perf_counter()-t_start:.4f}s")
         except Exception as e:
             self._status_pane.object = (
                 f'<div style="color:#EF4444;font-size:12px;">'
@@ -284,9 +332,6 @@ class DatabaseImportPanel(param.Parameterized):
             )
 
     def _on_import(self, event: object) -> None:
-        import logging
-        logger = logging.getLogger(__name__)
-
         if not self._connector or not self._columns:
             logger.warning("Import attempted with no connector or columns")
             return
@@ -304,50 +349,83 @@ class DatabaseImportPanel(param.Parameterized):
             )
             return
 
-        try:
-            logger.info(f"Starting import from table: {table}")
-            df = self._connector.get_records(table)
-            logger.info(f"Retrieved {len(df)} records from database")
+        t_total = time.perf_counter()
+        _log_resources("import:start")
 
+        try:
+            # Step 1: Fetch records
+            t0 = time.perf_counter()
+            logger.info(f"[PERF] Starting import from table: {table}")
+            df = self._connector.get_records(table)
+            logger.info(f"[PERF] get_records() took {time.perf_counter()-t0:.4f}s, "
+                        f"{len(df)} records, {df.memory_usage(deep=True).sum()/1024:.1f}KB")
+
+            # Step 2: Schema mapping
+            t0 = time.perf_counter()
             mapper = SchemaMapper.from_dict(mapping, db_source=self._connector.name)
             sequences = mapper.map_dataframe(df)
-            logger.info(f"Mapped to {len(sequences)} mRNASequence objects")
+            logger.info(f"[PERF] SchemaMapper.map_dataframe() took {time.perf_counter()-t0:.4f}s, "
+                        f"produced {len(sequences)} mRNASequence objects")
 
-            # Create NEW worklist for this import (don't add to existing)
+            # Step 3: Create worklist (pure data, no UI yet)
+            t0 = time.perf_counter()
             from core.models.worklist import Worklist
             worklist_name = self._worklist_name.value or f"{self._connector.name}.{table}"
             new_worklist = Worklist(name=worklist_name)
             new_worklist.add_many(sequences, origin="database_import")
-            logger.info(f"Created worklist '{worklist_name}' with {len(sequences)} items")
+            logger.info(f"[PERF] Worklist creation took {time.perf_counter()-t0:.4f}s")
 
-            # Replace the current worklist with the new one
-            self._state.worklist = new_worklist
-            self._state.register_db_connection(self._connector, mapper)
-
-            # Auto-extract parts from imported sequences
-            total_parts = 0
+            # Step 4: Collect parts candidates (pure data, no UI yet)
+            t0 = time.perf_counter()
+            from core.models.parts import create_part_from_component
+            all_candidates = []
             for seq in sequences:
-                parts_count = self._state.extract_parts_from_sequence(seq, source="database_import")
-                total_parts += parts_count
-            logger.info(f"Extracted {total_parts} parts from {len(sequences)} sequences")
+                for value, part_type, suffix in [
+                    (seq.five_prime_utr, "5_utr", "5UTR"),
+                    (seq.kozak, "kozak", "Kozak"),
+                    (seq.cds, "cds", "CDS"),
+                    (seq.three_prime_utr, "3_utr", "3UTR"),
+                    (seq.poly_a, "polya", "PolyA"),
+                ]:
+                    if value:
+                        all_candidates.append(create_part_from_component(
+                            sequence=value,
+                            part_type=part_type,
+                            name=f"{seq.name}_{suffix}",
+                            source="database_import",
+                            origin_sequence_id=seq.id,
+                        ))
+            logger.info(f"[PERF] Parts collection took {time.perf_counter()-t0:.4f}s, "
+                        f"{len(all_candidates)} candidates")
 
-            # Trigger parameter update so UI refreshes
-            self._state.param.trigger("worklist")
-            self._state.param.trigger("parts_library")
+            # Step 5: Apply ALL state mutations inside hold + batch
+            # pn.io.hold() — queues Bokeh document patches into one websocket msg
+            # batch_call_watchers — defers param watcher callbacks until exit
+            t0 = time.perf_counter()
+            import param as pm
+            with pn.io.hold():
+                with pm.parameterized.batch_call_watchers(self._state):
+                    self._state.worklist = new_worklist
+                    self._state.register_db_connection(self._connector, mapper)
+                    total_parts = self._state.add_parts_batch(all_candidates)
+                    self._state.show_db_import_modal = False
+                    self._state.active_tab = "worklist"
+                    self._state.set_status(
+                        f"Created worklist '{worklist_name}' with {len(sequences)} sequences. "
+                        f"Extracted {total_parts} reusable parts."
+                    )
+            logger.info(f"[PERF] Batched state update + render took {time.perf_counter()-t0:.4f}s")
+
+            _log_resources("import:end")
+            logger.info(f"[PERF] *** Total _on_import took {time.perf_counter()-t_total:.4f}s ***")
 
             self._status_pane.object = (
                 f'<div style="color:#10B981;font-size:12px;">'
                 f'✓ Created new worklist "{worklist_name}" with {len(sequences)} sequences<br>'
                 f'✓ Extracted {total_parts} parts to library</div>'
             )
-            self._state.set_status(
-                f"Created new worklist '{worklist_name}' with {len(sequences)} sequences. "
-                f"Extracted {total_parts} reusable parts."
-            )
-            # Close modal and navigate to worklist tab to show imported data
-            self._state.show_db_import_modal = False
-            self._state.active_tab = "worklist"
         except Exception as e:
+            logger.exception(f"[PERF] Import failed after {time.perf_counter()-t_total:.4f}s")
             self._status_pane.object = (
                 f'<div style="color:#EF4444;">Import failed: {e}</div>'
             )
@@ -356,10 +434,23 @@ class DatabaseImportPanel(param.Parameterized):
     def _auto_suggest(column_name: str) -> str:
         """Guess the target field from common column naming patterns."""
         col = column_name.lower().replace(" ", "_").replace("-", "_")
-        hints = {
+        # Exact matches first (avoid false positives)
+        exact = {
+            "gene_name": "name",
             "name": "name",
+            "cds": "cds",
+            "kozak": "kozak",
+            "poly_a": "poly_a",
+            "poly_a_tail": "poly_a",
+            "full_mrna": "full_mrna",
+            "five_prime_utr": "five_prime_utr",
+            "three_prime_utr": "three_prime_utr",
+        }
+        if col in exact:
+            return exact[col]
+        # Substring hints
+        hints = {
             "gene": "name",
-            "id": "name",
             "label": "name",
             "utr5": "five_prime_utr",
             "5utr": "five_prime_utr",
@@ -367,12 +458,9 @@ class DatabaseImportPanel(param.Parameterized):
             "utr3": "three_prime_utr",
             "3utr": "three_prime_utr",
             "three_prime": "three_prime_utr",
-            "cds": "cds",
             "orf": "cds",
             "coding": "cds",
-            "kozak": "kozak",
             "polya": "poly_a",
-            "poly_a": "poly_a",
             "mrna": "full_mrna",
             "sequence": "full_mrna",
             "seq": "full_mrna",

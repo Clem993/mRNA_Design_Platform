@@ -8,9 +8,12 @@ database records.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional
 
 import param
+
+logger = logging.getLogger(__name__)
 
 from core.models.sequence import mRNASequence
 from core.models.plasmid import PlasmidBackbone
@@ -172,7 +175,6 @@ class AppState(param.Parameterized):
         By default, deduplicates by sequence hash to avoid storing identical parts.
         """
         if not allow_duplicates:
-            # Check if this exact sequence already exists
             existing_hashes = {p.sequence_hash for p in self.parts_library}
             if part.sequence_hash in existing_hashes:
                 return False
@@ -182,6 +184,22 @@ class AppState(param.Parameterized):
         self.parts_library = updated
         return True
 
+    def add_parts_batch(self, parts: List[SequencePart]) -> int:
+        """
+        Add multiple parts in a single operation (one param trigger).
+        Deduplicates against existing library and within the batch.
+        Returns the number of parts actually added.
+        """
+        existing_hashes = {p.sequence_hash for p in self.parts_library}
+        new_parts = []
+        for part in parts:
+            if part.sequence_hash not in existing_hashes:
+                existing_hashes.add(part.sequence_hash)
+                new_parts.append(part)
+        if new_parts:
+            self.parts_library = list(self.parts_library) + new_parts
+        return len(new_parts)
+
     def extract_parts_from_sequence(self, seq: mRNASequence, source: str = "extracted") -> int:
         """
         Extract all available components from an mRNASequence and add to parts library.
@@ -189,64 +207,25 @@ class AppState(param.Parameterized):
         """
         from core.models.parts import create_part_from_component
 
-        extracted_count = 0
+        candidates = []
+        component_map = [
+            (seq.five_prime_utr, "5_utr", "5UTR"),
+            (seq.kozak, "kozak", "Kozak"),
+            (seq.cds, "cds", "CDS"),
+            (seq.three_prime_utr, "3_utr", "3UTR"),
+            (seq.poly_a, "polya", "PolyA"),
+        ]
+        for value, part_type, suffix in component_map:
+            if value:
+                candidates.append(create_part_from_component(
+                    sequence=value,
+                    part_type=part_type,
+                    name=f"{seq.name}_{suffix}",
+                    source=source,
+                    origin_sequence_id=seq.id,
+                ))
 
-        if seq.five_prime_utr:
-            part = create_part_from_component(
-                sequence=seq.five_prime_utr,
-                part_type="5_utr",
-                name=f"{seq.name}_5UTR",
-                source=source,
-                origin_sequence_id=seq.id,
-            )
-            if self.add_part(part):
-                extracted_count += 1
-
-        if seq.kozak:
-            part = create_part_from_component(
-                sequence=seq.kozak,
-                part_type="kozak",
-                name=f"{seq.name}_Kozak",
-                source=source,
-                origin_sequence_id=seq.id,
-            )
-            if self.add_part(part):
-                extracted_count += 1
-
-        if seq.cds:
-            part = create_part_from_component(
-                sequence=seq.cds,
-                part_type="cds",
-                name=f"{seq.name}_CDS",
-                source=source,
-                origin_sequence_id=seq.id,
-            )
-            if self.add_part(part):
-                extracted_count += 1
-
-        if seq.three_prime_utr:
-            part = create_part_from_component(
-                sequence=seq.three_prime_utr,
-                part_type="3_utr",
-                name=f"{seq.name}_3UTR",
-                source=source,
-                origin_sequence_id=seq.id,
-            )
-            if self.add_part(part):
-                extracted_count += 1
-
-        if seq.poly_a:
-            part = create_part_from_component(
-                sequence=seq.poly_a,
-                part_type="polya",
-                name=f"{seq.name}_PolyA",
-                source=source,
-                origin_sequence_id=seq.id,
-            )
-            if self.add_part(part):
-                extracted_count += 1
-
-        return extracted_count
+        return self.add_parts_batch(candidates)
 
     def parts_by_type(self, part_type: str) -> List[SequencePart]:
         """Return all parts of a given type."""

@@ -312,9 +312,14 @@ class RegistrySidebar(param.Parameterized):
         return btn
 
     def _on_import_db(self, event: object) -> None:
-        # Show database import modal
+        # Close other modals before opening this one
+        self._state.show_model_repo_modal = False
+        self._state.show_analysis_settings_modal = False
         self._state.show_db_import_modal = True
 
     def _on_browse_models(self, event: object) -> None:
         """Open the model repository browser modal."""
+        # Close other modals before opening this one
+        self._state.show_db_import_modal = False
+        self._state.show_analysis_settings_modal = False
         self._state.show_model_repo_modal = True

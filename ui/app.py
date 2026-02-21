@@ -6,8 +6,19 @@ main area that fits the viewport without horizontal overflow.
 """
 from __future__ import annotations
 
+import logging
+import sys
+
 import panel as pn
 import param
+
+# ── Logging configuration ─────────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+    stream=sys.stderr,
+)
 
 from ui.state import AppState
 from ui.components.sidebar import RegistrySidebar
@@ -131,6 +142,9 @@ _TAB_NAMES  = ["Worklist", "Parts Workshop", "Assemble Plasmid", "Generate Seque
 _TAB_KEYS   = ["worklist", "parts", "assemble", "generate"]
 
 
+logger = logging.getLogger(__name__)
+
+
 class StudioApp(param.Parameterized):
     """Root application object — one instance per browser session."""
 
@@ -149,181 +163,137 @@ class StudioApp(param.Parameterized):
         self._generate      = GenerateSequencesPanel(self.state)
         self._analysis_settings = AnalysisSettingsPanel(self.state)
 
-    # ── Sequence Inspection Modal ─────────────────────────────────────────────
+        # ── Build persistent widgets once ─────────────────────────────────────
+        self._status_html = pn.pane.HTML("", height=0, margin=0, sizing_mode="stretch_width")
+        self._seq_modal_container = pn.Column(visible=False, sizing_mode="stretch_width")
+        self._db_modal_container = pn.Column(visible=False, sizing_mode="stretch_width")
+        self._model_modal_container = pn.Column(visible=False, sizing_mode="stretch_width")
+        self._settings_modal_container = pn.Column(visible=False, sizing_mode="stretch_width")
 
-    @param.depends("state.show_sequence_modal", "state.active_sequence")
-    def _sequence_modal(self) -> pn.viewable.Viewable:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info(f"Modal render: show={self.state.show_sequence_modal}, seq={self.state.active_sequence}")
-
-        if not self.state.show_sequence_modal or not self.state.active_sequence:
-            return pn.Column(visible=False)
-
-        # Close button
-        close_btn = pn.widgets.Button(
-            name="✕ Close",
-            button_type="primary",
-            width=100,
-        )
-
-        def close_modal(event: object) -> None:
-            logger.info("Close button clicked")
-            self.state.show_sequence_modal = False
-
-        close_btn.on_click(close_modal)
-
-        # Modal content using Card
-        modal = pn.Card(
-            pn.panel(self._seq_view.panel),
-            title=f"Sequence Inspection: {self.state.active_sequence.name}",
-            header=close_btn,
-            collapsed=False,
-            collapsible=False,
-            sizing_mode="stretch_width",
-            width=1000,
-            styles={"background": "white"},
-        )
-
-        return modal
-
-    # ── Database Import Modal ─────────────────────────────────────────────────
-
-    @param.depends("state.show_db_import_modal")
-    def _db_import_modal(self) -> pn.viewable.Viewable:
-        if not self.state.show_db_import_modal:
-            return pn.Column(visible=False)
-
-        close_btn = pn.widgets.Button(
-            name="✕ Close",
-            button_type="primary",
-            width=100,
-        )
-
-        def close_modal(event: object) -> None:
-            self.state.show_db_import_modal = False
-
-        close_btn.on_click(close_modal)
-
-        modal = pn.Card(
-            pn.panel(self._db_import.panel),
-            title="Import Database",
-            header=close_btn,
-            collapsed=False,
-            collapsible=False,
-            sizing_mode="stretch_width",
-            width=900,
-            styles={"background": "white"},
-        )
-
-        return modal
-
-    # ── Model Repository Modal ────────────────────────────────────────────────
-
-    @param.depends("state.show_model_repo_modal")
-    def _model_repo_modal(self) -> pn.viewable.Viewable:
-        if not self.state.show_model_repo_modal:
-            return pn.Column(visible=False)
-
-        close_btn = pn.widgets.Button(
-            name="✕ Close",
-            button_type="primary",
-            width=100,
-        )
-
-        def close_modal(event: object) -> None:
-            self.state.show_model_repo_modal = False
-
-        close_btn.on_click(close_modal)
-
-        modal = pn.Card(
-            self._model_repo.panel(),
-            title="Model Repository",
-            header=close_btn,
-            collapsed=False,
-            collapsible=False,
-            sizing_mode="stretch_width",
-            width=1000,
-            styles={"background": "white"},
-        )
-
-        return modal
-
-    # ── Analysis Settings Modal ───────────────────────────────────────────────
-
-    @param.depends("state.show_analysis_settings_modal")
-    def _analysis_settings_modal(self) -> pn.viewable.Viewable:
-        if not self.state.show_analysis_settings_modal:
-            return pn.Column(visible=False)
-
-        close_btn = pn.widgets.Button(
-            name="✕ Close",
-            button_type="primary",
-            width=100,
-        )
-
-        def close_modal(event: object) -> None:
-            self.state.show_analysis_settings_modal = False
-
-        close_btn.on_click(close_modal)
-
-        modal = pn.Card(
-            self._analysis_settings.panel(),
-            title="Analysis Settings",
-            header=close_btn,
-            collapsed=False,
-            collapsible=False,
-            sizing_mode="stretch_width",
-            width=900,
-            styles={"background": "white"},
-        )
-
-        return modal
-
-    # ── Status bar ────────────────────────────────────────────────────────────
-
-    @param.depends("state.status_message")
-    def _status_bar(self) -> pn.pane.HTML:
-        msg = self.state.status_message
-        if not msg:
-            return pn.pane.HTML("", height=0, margin=0)
-        return pn.pane.HTML(
-            f'<div style="background:{THEME["success"]};color:white;'
-            f'font-size:12px;padding:6px 16px;border-radius:4px;margin:4px 0;">'
-            f'✓ {msg}</div>',
-            sizing_mode="stretch_width",
-            margin=(0, 0, 4, 0),
-        )
-
-    # ── Main tabs ─────────────────────────────────────────────────────────────
-
-    @param.depends("state.active_tab")
-    def _main_tabs(self) -> pn.Tabs:
-        active_idx = _TAB_KEYS.index(self.state.active_tab) if self.state.active_tab in _TAB_KEYS else 0
-
-        tabs = pn.Tabs(
+        self._tabs = pn.Tabs(
             (_TAB_NAMES[0], pn.Column(
-                pn.panel(self._status_bar),
+                self._status_html,
                 pn.panel(self._worklist.panel),
-                pn.panel(self._sequence_modal),
-                pn.panel(self._db_import_modal),
-                pn.panel(self._model_repo_modal),
-                pn.panel(self._analysis_settings_modal),
+                self._seq_modal_container,
+                self._db_modal_container,
+                self._model_modal_container,
+                self._settings_modal_container,
                 sizing_mode="stretch_width",
             )),
             (_TAB_NAMES[1], pn.panel(self._parts.panel)),
             (_TAB_NAMES[2], pn.panel(self._assembly.panel)),
             (_TAB_NAMES[3], pn.panel(self._generate.panel)),
-            active=active_idx,
+            active=0,
             sizing_mode="stretch_width",
         )
 
-        def _sync_tab(event: object) -> None:
-            if hasattr(event, "new") and 0 <= event.new < len(_TAB_KEYS):
-                self.state.active_tab = _TAB_KEYS[event.new]
+        # ── Wire up watchers (update in place, no widget rebuilds) ────────────
+        self.state.param.watch(self._on_active_tab_changed, "active_tab")
+        self._tabs.param.watch(self._on_tab_widget_changed, "active")
+        self.state.param.watch(self._on_status_changed, "status_message")
+        self.state.param.watch(self._on_seq_modal_changed, ["show_sequence_modal", "active_sequence"])
+        self.state.param.watch(self._on_db_modal_changed, "show_db_import_modal")
+        self.state.param.watch(self._on_model_modal_changed, "show_model_repo_modal")
+        self.state.param.watch(self._on_settings_modal_changed, "show_analysis_settings_modal")
 
-        tabs.param.watch(_sync_tab, "active")
-        return tabs
+    # ── Tab sync (update .active property, no rebuild) ────────────────────────
+
+    def _on_active_tab_changed(self, event: param.parameterized.Event) -> None:
+        idx = _TAB_KEYS.index(event.new) if event.new in _TAB_KEYS else 0
+        if self._tabs.active != idx:
+            self._tabs.active = idx
+
+    def _on_tab_widget_changed(self, event: param.parameterized.Event) -> None:
+        if hasattr(event, "new") and 0 <= event.new < len(_TAB_KEYS):
+            key = _TAB_KEYS[event.new]
+            if self.state.active_tab != key:
+                self.state.active_tab = key
+
+    # ── Status bar (update HTML in place) ─────────────────────────────────────
+
+    def _on_status_changed(self, event: param.parameterized.Event) -> None:
+        msg = event.new
+        if not msg:
+            self._status_html.object = ""
+            self._status_html.height = 0
+        else:
+            self._status_html.object = (
+                f'<div style="background:{THEME["success"]};color:white;'
+                f'font-size:12px;padding:6px 16px;border-radius:4px;margin:4px 0;">'
+                f'✓ {msg}</div>'
+            )
+            self._status_html.height = None
+
+    # ── Modals (toggle visibility on persistent containers) ───────────────────
+
+    def _on_seq_modal_changed(self, *events: param.parameterized.Event) -> None:
+        show = self.state.show_sequence_modal and self.state.active_sequence is not None
+        if show:
+            close_btn = pn.widgets.Button(name="✕ Close", button_type="primary", width=100)
+            close_btn.on_click(lambda e: setattr(self.state, "show_sequence_modal", False))
+            modal = pn.Card(
+                pn.panel(self._seq_view.panel),
+                title=f"Sequence Inspection: {self.state.active_sequence.name}",
+                header=close_btn,
+                collapsed=False, collapsible=False,
+                min_width=1000, styles={"background": "white"},
+            )
+            self._seq_modal_container.clear()
+            self._seq_modal_container.append(modal)
+            self._seq_modal_container.visible = True
+        else:
+            self._seq_modal_container.visible = False
+
+    def _on_db_modal_changed(self, event: param.parameterized.Event) -> None:
+        if event.new:
+            close_btn = pn.widgets.Button(name="✕ Close", button_type="primary", width=100)
+            close_btn.on_click(lambda e: setattr(self.state, "show_db_import_modal", False))
+            modal = pn.Card(
+                pn.panel(self._db_import.panel),
+                title="Import Database",
+                header=close_btn,
+                collapsed=False, collapsible=False,
+                min_width=900, styles={"background": "white"},
+            )
+            self._db_modal_container.clear()
+            self._db_modal_container.append(modal)
+            self._db_modal_container.visible = True
+        else:
+            self._db_modal_container.visible = False
+
+    def _on_model_modal_changed(self, event: param.parameterized.Event) -> None:
+        if event.new:
+            close_btn = pn.widgets.Button(name="✕ Close", button_type="primary", width=100)
+            close_btn.on_click(lambda e: setattr(self.state, "show_model_repo_modal", False))
+            modal = pn.Card(
+                self._model_repo.panel(),
+                title="Model Repository",
+                header=close_btn,
+                collapsed=False, collapsible=False,
+                min_width=1000, styles={"background": "white"},
+            )
+            self._model_modal_container.clear()
+            self._model_modal_container.append(modal)
+            self._model_modal_container.visible = True
+        else:
+            self._model_modal_container.visible = False
+
+    def _on_settings_modal_changed(self, event: param.parameterized.Event) -> None:
+        if event.new:
+            close_btn = pn.widgets.Button(name="✕ Close", button_type="primary", width=100)
+            close_btn.on_click(lambda e: setattr(self.state, "show_analysis_settings_modal", False))
+            modal = pn.Card(
+                self._analysis_settings.panel(),
+                title="Analysis Settings",
+                header=close_btn,
+                collapsed=False, collapsible=False,
+                min_width=900, styles={"background": "white"},
+            )
+            self._settings_modal_container.clear()
+            self._settings_modal_container.append(modal)
+            self._settings_modal_container.visible = True
+        else:
+            self._settings_modal_container.visible = False
 
     # ── Template ──────────────────────────────────────────────────────────────
 
@@ -337,7 +307,7 @@ class StudioApp(param.Parameterized):
             theme_toggle=False,
         )
         template.main.append(pn.Column(
-            pn.panel(self._main_tabs),
+            self._tabs,
             sizing_mode="stretch_width",
             styles={"overflow-x": "hidden"},
         ))

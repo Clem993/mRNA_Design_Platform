@@ -32,32 +32,32 @@ from ui.components.generate_sequences import GenerateSequencesPanel
 
 # ── Design tokens ─────────────────────────────────────────────────────────────
 THEME = {
-    "sidebar_bg":      "#0F172A",   # slate-950
-    "sidebar_border":  "#1E293B",   # slate-800
-    "sidebar_text":    "#94A3B8",   # slate-400
-    "sidebar_heading": "#F1F5F9",   # slate-100
-    "sidebar_hover":   "#1E293B",   # slate-800
-    "sidebar_active_bg": "#312E81", # indigo-900
-    "sidebar_active_text": "#A5B4FC", # indigo-300
+    "sidebar_bg":      "#0B1120",   # deep navy
+    "sidebar_border":  "#1A2332",   # dark navy border
+    "sidebar_text":    "#8899AA",   # cool gray text
+    "sidebar_heading": "#E8EDF2",   # near-white heading
+    "sidebar_hover":   "#162032",   # subtle hover
+    "sidebar_active_bg": "#0F3D3E", # dark teal selection
+    "sidebar_active_text": "#5EEAD4", # teal-300
 
-    "accent":          "#6366F1",   # indigo-500
-    "accent_light":    "#818CF8",   # indigo-400
-    "success":         "#10B981",   # emerald-500
-    "warning":         "#F59E0B",   # amber-500
-    "danger":          "#EF4444",   # red-500
+    "accent":          "#0D9488",   # teal-600 — primary science accent
+    "accent_light":    "#14B8A6",   # teal-500
+    "success":         "#059669",   # emerald-600
+    "warning":         "#D97706",   # amber-600
+    "danger":          "#DC2626",   # red-600
 
-    "bg":              "#F8FAFC",   # slate-50
+    "bg":              "#F1F5F9",   # slate-100
     "card_bg":         "#FFFFFF",
-    "card_border":     "#E2E8F0",   # slate-200
+    "card_border":     "#CBD5E1",   # slate-300
     "text_primary":    "#0F172A",   # slate-950
-    "text_secondary":  "#64748B",   # slate-500
-    "text_muted":      "#94A3B8",   # slate-400
+    "text_secondary":  "#475569",   # slate-600
+    "text_muted":      "#64748B",   # slate-500
 
-    "component_utr5":  "#3B82F6",   # blue-500
-    "component_kozak": "#F59E0B",   # amber-500
-    "component_cds":   "#10B981",   # emerald-500
-    "component_utr3":  "#8B5CF6",   # violet-500
-    "component_polya": "#EF4444",   # red-500
+    "component_utr5":  "#0284C7",   # sky-600
+    "component_kozak": "#D97706",   # amber-600
+    "component_cds":   "#059669",   # emerald-600
+    "component_utr3":  "#7C3AED",   # violet-600
+    "component_polya": "#DC2626",   # red-600
 }
 
 _GLOBAL_CSS = f"""
@@ -81,9 +81,11 @@ html, body {{
     max-width: 100%;
 }}
 .bk-root {{
-    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
     max-width: 100vw !important;
     overflow-x: hidden !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }}
 .bk, .bk-Canvas, .bk-GridBox, .bk-Row, .bk-Column {{
     max-width: 100% !important;
@@ -201,7 +203,7 @@ class StudioApp(param.Parameterized):
         template = pn.template.FastListTemplate(
             title="mRNA Design Studio",
             sidebar=[pn.panel(self._sidebar_comp.panel)],
-            sidebar_width=240,
+            sidebar_width=250,
             header_background=THEME["sidebar_bg"],
             accent_base_color=THEME["accent"],
             theme_toggle=False,

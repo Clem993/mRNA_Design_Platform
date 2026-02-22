@@ -124,11 +124,11 @@ class PlasmidView(param.Parameterized):
 
         # Part selectors in a grid
         selectors = pn.GridBox(
-            self._build_part_selector("5_utr", "5' UTR", "#4A90D9"),
-            self._build_part_selector("kozak", "Kozak", "#F5A623"),
-            self._build_part_selector("cds", "CDS", "#7ED321"),
-            self._build_part_selector("3_utr", "3' UTR", "#9B59B6"),
-            self._build_part_selector("polya", "Poly-A", "#E74C3C"),
+            self._build_part_selector("5_utr", "5' UTR", "#0284C7"),
+            self._build_part_selector("kozak", "Kozak", "#D97706"),
+            self._build_part_selector("cds", "CDS", "#059669"),
+            self._build_part_selector("3_utr", "3' UTR", "#7C3AED"),
+            self._build_part_selector("polya", "Poly-A", "#DC2626"),
             ncols=3,
             sizing_mode="stretch_width",
         )
@@ -223,7 +223,7 @@ class PlasmidView(param.Parameterized):
 
         if not part_groups:
             self._result_pane.object = (
-                '<div style="color:#E74C3C;padding:12px;">'\
+                '<div style="color:#DC2626;padding:12px;">'\
                 'Please select at least one part to assemble.</div>'
             )
             self._add_to_wl_section.visible = False
@@ -256,17 +256,17 @@ class PlasmidView(param.Parameterized):
                            f'... and {combo_count - 5} more combinations</div>'
 
         self._combo_count_pane.object = (
-            f'<div style="font-size:13px;font-weight:700;color:#6366F1;">'\
+            f'<div style="font-size:13px;font-weight:700;color:#0D9488;">'\
             f'{combo_count} sequences will be generated</div>'\
             f'<div style="font-size:11px;color:#64748B;">({selection_summary})</div>'
         )
 
         self._result_pane.object = (
-            f'<div style="background:#EEF2FF;border:1px solid #6366F1;border-radius:6px;'\
+            f'<div style="background:#F0FDFA;border:1px solid #0D9488;border-radius:6px;'\
             f'padding:16px;margin-top:12px;">'\
-            f'<div style="font-weight:700;color:#4338CA;margin-bottom:8px;">'\
+            f'<div style="font-weight:700;color:#0F766E;margin-bottom:8px;">'\
             f'✓ Combination Preview ({combo_count} sequences)</div>'\
-            f'<div style="font-size:12px;color:#312E81;">'\
+            f'<div style="font-size:12px;color:#134E4A;">'\
             f'{preview_html}'\
             f'</div></div>'
         )

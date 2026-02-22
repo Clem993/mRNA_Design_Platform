@@ -255,7 +255,7 @@ class DatabaseImportPanel(param.Parameterized):
                     f'padding-top:8px;min-width:180px;">{col}</div>'
                 ),
                 pn.pane.HTML(
-                    '<div style="padding-top:8px;font-size:12px;color:#7F8C8D;">'
+                    '<div style="padding-top:8px;font-size:12px;color:#64748B;">'
                     '&rarr;</div>'
                 ),
                 sel,

@@ -288,12 +288,12 @@ class PlasmidAssemblyPanel(param.Parameterized):
         )
 
         self._preview_pane.object = (
-            f'<div style="background:#EEF2FF;border:1px solid #6366F1;border-radius:6px;padding:14px;margin-bottom:8px;">'
-            f'<div style="font-weight:700;color:#4338CA;margin-bottom:6px;">🧬 {backbone.name}</div>'
+            f'<div style="background:#F0FDFA;border:1px solid #0D9488;border-radius:6px;padding:14px;margin-bottom:8px;">'
+            f'<div style="font-weight:700;color:#0F766E;margin-bottom:6px;">🧬 {backbone.name}</div>'
             f'<div style="margin-bottom:6px;">{features_html}</div>'
-            f'<div style="font-size:12px;color:#312E81;">↕ Insert: {wl.name} ({wl.count} sequences)</div>'
-            f'<div style="font-size:12px;color:#312E81;margin-top:4px;">Strategy: {strategy_desc}</div>'
-            f'<div style="font-size:12px;color:#312E81;">Estimated size: {min_size:,} - {max_size:,} bp</div>'
+            f'<div style="font-size:12px;color:#134E4A;">↕ Insert: {wl.name} ({wl.count} sequences)</div>'
+            f'<div style="font-size:12px;color:#134E4A;margin-top:4px;">Strategy: {strategy_desc}</div>'
+            f'<div style="font-size:12px;color:#134E4A;">Estimated size: {min_size:,} - {max_size:,} bp</div>'
             f'</div>'
         )
 

@@ -75,18 +75,18 @@ class ModelRunnerPanel(param.Parameterized):
 
         if not all_models:
             return pn.pane.HTML(
-                '<div style="color:#7F8C8D;font-size:12px;padding:8px 0;">'
+                '<div style="color:#64748B;font-size:12px;padding:8px 0;">'
                 'No models loaded yet.</div>'
             )
 
         rows = []
         for reg in all_models:
-            type_badge_color = "#3498DB" if reg.model_type == "scoring" else "#9B59B6"
+            type_badge_color = "#0284C7" if reg.model_type == "scoring" else "#7C3AED"
             source_badge = (
-                '<span style="background:#2ECC71;color:white;border-radius:3px;'
+                '<span style="background:#059669;color:white;border-radius:3px;'
                 'padding:1px 5px;font-size:9px;">LOCAL</span>'
                 if reg.source == "local" else
-                '<span style="background:#F39C12;color:white;border-radius:3px;'
+                '<span style="background:#D97706;color:white;border-radius:3px;'
                 'padding:1px 5px;font-size:9px;">API</span>'
             )
             type_badge = (
@@ -114,7 +114,7 @@ class ModelRunnerPanel(param.Parameterized):
                 ),
                 pn.pane.HTML(f'<div style="padding-top:6px;">{type_badge} {source_badge}</div>'),
                 pn.pane.HTML(
-                    f'<div style="font-size:10px;color:#7F8C8D;padding-top:7px;'
+                    f'<div style="font-size:10px;color:#64748B;padding-top:7px;'
                     f'max-width:200px;overflow:hidden;text-overflow:ellipsis;">'
                     f'{reg.model.description}</div>'
                 ),
@@ -159,14 +159,14 @@ class ModelRunnerPanel(param.Parameterized):
                 ("Score Sequences", pn.Column(
                     pn.Row(self._score_model_select, run_score_btn),
                     pn.pane.HTML(
-                        '<div style="font-size:11px;color:#7F8C8D;">'
+                        '<div style="font-size:11px;color:#64748B;">'
                         'Scores all items currently in the worklist.</div>'
                     ),
                 )),
                 ("Generate Sequences", pn.Column(
                     pn.Row(self._gen_model_select, self._gen_n, run_gen_btn),
                     pn.pane.HTML(
-                        '<div style="font-size:11px;color:#7F8C8D;">'
+                        '<div style="font-size:11px;color:#64748B;">'
                         'New sequences are added to the worklist.</div>'
                     ),
                 )),
@@ -206,11 +206,11 @@ class ModelRunnerPanel(param.Parameterized):
             self._state.param.trigger("model_registry")
             names = ", ".join(m.name for m in loaded)
             self._status_pane.object = (
-                f'<div style="color:#2ECC71;font-size:12px;">✓ Loaded: {names}</div>'
+                f'<div style="color:#059669;font-size:12px;">✓ Loaded: {names}</div>'
             )
         except Exception as e:
             self._status_pane.object = (
-                f'<div style="color:#E74C3C;font-size:12px;">✗ {e}</div>'
+                f'<div style="color:#DC2626;font-size:12px;">✗ {e}</div>'
             )
 
     def _on_register_api(self, event: object) -> None:
@@ -228,11 +228,11 @@ class ModelRunnerPanel(param.Parameterized):
                 self._state.model_registry.register_api_generator(endpoint, name, key)
             self._state.param.trigger("model_registry")
             self._status_pane.object = (
-                f'<div style="color:#2ECC71;font-size:12px;">✓ Registered API: {name}</div>'
+                f'<div style="color:#059669;font-size:12px;">✓ Registered API: {name}</div>'
             )
         except Exception as e:
             self._status_pane.object = (
-                f'<div style="color:#E74C3C;font-size:12px;">✗ {e}</div>'
+                f'<div style="color:#DC2626;font-size:12px;">✗ {e}</div>'
             )
 
     def _on_run_scoring(self, event: object) -> None:
@@ -242,7 +242,7 @@ class ModelRunnerPanel(param.Parameterized):
         sequences = self._state.worklist.sequences
         if not sequences:
             self._status_pane.object = (
-                '<div style="color:#F39C12;font-size:12px;">Worklist is empty.</div>'
+                '<div style="color:#D97706;font-size:12px;">Worklist is empty.</div>'
             )
             return
         try:
@@ -253,12 +253,12 @@ class ModelRunnerPanel(param.Parameterized):
                     item.scores[model_name] = score_map[item.sequence.id]
             self._state.param.trigger("worklist")
             self._status_pane.object = (
-                f'<div style="color:#2ECC71;font-size:12px;">'
+                f'<div style="color:#059669;font-size:12px;">'
                 f'✓ Scored {len(sequences)} sequences with {model_name}</div>'
             )
         except Exception as e:
             self._status_pane.object = (
-                f'<div style="color:#E74C3C;font-size:12px;">✗ Scoring failed: {e}</div>'
+                f'<div style="color:#DC2626;font-size:12px;">✗ Scoring failed: {e}</div>'
             )
 
     def _on_run_generation(self, event: object) -> None:
@@ -271,10 +271,10 @@ class ModelRunnerPanel(param.Parameterized):
             self._state.worklist.add_many(new_seqs, origin="generated")
             self._state.param.trigger("worklist")
             self._status_pane.object = (
-                f'<div style="color:#2ECC71;font-size:12px;">'
+                f'<div style="color:#059669;font-size:12px;">'
                 f'✓ Generated {len(new_seqs)} sequences → added to worklist</div>'
             )
         except Exception as e:
             self._status_pane.object = (
-                f'<div style="color:#E74C3C;font-size:12px;">✗ Generation failed: {e}</div>'
+                f'<div style="color:#DC2626;font-size:12px;">✗ Generation failed: {e}</div>'
             )

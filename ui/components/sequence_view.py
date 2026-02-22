@@ -16,20 +16,20 @@ from core.models.sequence import mRNASequence
 if TYPE_CHECKING:
     from ui.state import AppState
 
-# Component colours matching sidebar legend
+# Component colours — science palette
 _COMPONENT_COLORS = {
-    "5'UTR":  "#4A90D9",
-    "Kozak":  "#F5A623",
-    "CDS":    "#7ED321",
-    "3'UTR":  "#9B59B6",
-    "PolyA":  "#E74C3C",
+    "5'UTR":  "#0284C7",    # sky-600
+    "Kozak":  "#D97706",    # amber-600
+    "CDS":    "#059669",    # emerald-600
+    "3'UTR":  "#7C3AED",    # violet-600
+    "PolyA":  "#DC2626",    # red-600
 }
 
 
 def _component_track_html(seq: mRNASequence) -> str:
     """Render an SVG-like horizontal bar showing sequence components."""
     if not seq.has_components:
-        return '<div style="color:#7F8C8D;font-size:12px;">No component breakdown available.</div>'
+        return '<div style="color:#64748B;font-size:12px;">No component breakdown available.</div>'
 
     annotations = seq.component_annotations
     total_len = seq.length or 1
@@ -39,7 +39,7 @@ def _component_track_html(seq: mRNASequence) -> str:
     for ann in annotations:
         x = int(ann.start / total_len * bar_width)
         w = max(2, int(ann.length / total_len * bar_width))
-        color = ann.color or "#BDC3C7"
+        color = ann.color or "#94A3B8"
         rects.append(
             f'<rect x="{x}" y="0" width="{w}" height="28" fill="{color}" rx="3"/>'
             f'<text x="{x + w//2}" y="19" text-anchor="middle" '
@@ -54,7 +54,7 @@ def _component_track_html(seq: mRNASequence) -> str:
     )
     ticks = (
         f'<div style="display:flex;justify-content:space-between;'
-        f'font-size:9px;color:#7F8C8D;width:{bar_width}px;">'
+        f'font-size:9px;color:#64748B;width:{bar_width}px;">'
         f'<span>0</span><span>{total_len} nt</span></div>'
     )
     return f'<div style="overflow-x:auto;">{svg}{ticks}</div>'
@@ -107,20 +107,20 @@ def _component_fields_html(seq: mRNASequence) -> str:
             continue
         display_name = _derive_component_name(seq, label)
         preview = value[:120] + ("…" if len(value) > 120 else "")
-        color = _COMPONENT_COLORS.get(label.replace(" ", ""), "#BDC3C7")
+        color = _COMPONENT_COLORS.get(label.replace(" ", ""), "#94A3B8")
         blocks.append(f"""
         <div style="margin-bottom:10px;">
             <div style="font-size:11px;font-weight:700;color:{color};
                         text-transform:uppercase;letter-spacing:1px;
                         margin-bottom:3px;">{display_name}</div>
-            <div style="font-family:monospace;font-size:11px;background:#F8F9FA;
-                        border:1px solid #E9ECEF;border-radius:4px;padding:6px 8px;
-                        word-break:break-all;color:#2C3E50;">{preview}</div>
-            <div style="font-size:10px;color:#7F8C8D;margin-top:2px;">
+            <div style="font-family:monospace;font-size:11px;background:#F1F5F9;
+                        border:1px solid #CBD5E1;border-radius:4px;padding:6px 8px;
+                        word-break:break-all;color:#0F172A;">{preview}</div>
+            <div style="font-size:10px;color:#64748B;margin-top:2px;">
                 {len(value)} nt</div>
         </div>
         """)
-    return "".join(blocks) if blocks else '<div style="color:#7F8C8D;">No sequence data.</div>'
+    return "".join(blocks) if blocks else '<div style="color:#64748B;">No sequence data.</div>'
 
 
 class SequenceView(param.Parameterized):
@@ -136,17 +136,17 @@ class SequenceView(param.Parameterized):
         if seq is None:
             return pn.Column(
                 pn.pane.HTML(
-                    '<div style="color:#7F8C8D;padding:40px;font-size:14px;">'
+                    '<div style="color:#64748B;padding:40px;font-size:14px;">'
                     'Select a sequence from the registry to view details.</div>'
                 )
             )
 
         # Header with metadata
         source_badge = (
-            '<span style="background:#2ECC71;color:white;border-radius:3px;'
+            '<span style="background:#059669;color:white;border-radius:3px;'
             'padding:2px 6px;font-size:10px;font-weight:700;">LOCAL</span>'
             if seq.source == "local" else
-            f'<span style="background:#3498DB;color:white;border-radius:3px;'
+            f'<span style="background:#0D9488;color:white;border-radius:3px;'
             f'padding:2px 6px;font-size:10px;font-weight:700;">DB: {seq.db_source}</span>'
         )
 
@@ -158,17 +158,17 @@ class SequenceView(param.Parameterized):
         expr_sys = meta.get("expression_system")
         if protein:
             meta_badges += (
-                f'<span style="background:#10B98133;color:#10B981;border-radius:3px;'
+                f'<span style="background:#05966933;color:#059669;border-radius:3px;'
                 f'padding:2px 6px;font-size:10px;font-weight:600;">{protein}</span> '
             )
         if organism:
             meta_badges += (
-                f'<span style="background:#8B5CF633;color:#8B5CF6;border-radius:3px;'
+                f'<span style="background:#7C3AED33;color:#7C3AED;border-radius:3px;'
                 f'padding:2px 6px;font-size:10px;font-weight:600;">{organism}</span> '
             )
         if expr_sys:
             meta_badges += (
-                f'<span style="background:#F59E0B33;color:#F59E0B;border-radius:3px;'
+                f'<span style="background:#D9770633;color:#D97706;border-radius:3px;'
                 f'padding:2px 6px;font-size:10px;font-weight:600;">{expr_sys}</span> '
             )
 
@@ -193,8 +193,8 @@ class SequenceView(param.Parameterized):
             <div style="font-size:20px;font-weight:800;">{seq.name}</div>
             <div style="margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                 {source_badge}
-                <span style="font-size:12px;color:#7F8C8D;">{seq.length} nt total</span>
-                <span style="font-size:12px;color:#7F8C8D;">ID: {seq.id[:8]}…</span>
+                <span style="font-size:12px;color:#64748B;">{seq.length} nt total</span>
+                <span style="font-size:12px;color:#64748B;">ID: {seq.id[:8]}…</span>
             </div>
             <div style="margin-top:6px;display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
                 {meta_badges}
@@ -215,14 +215,14 @@ class SequenceView(param.Parameterized):
         meta_rows = ""
         if seq.raw_metadata:
             rows = "".join(
-                f'<tr><td style="font-size:11px;color:#7F8C8D;padding:2px 8px;">'
+                f'<tr><td style="font-size:11px;color:#64748B;padding:2px 8px;">'
                 f'{k}</td><td style="font-size:11px;font-family:monospace;">'
                 f'{str(v)[:80]}</td></tr>'
                 for k, v in seq.raw_metadata.items()
             )
             meta_rows = f"""
             <details style="margin-top:12px;">
-                <summary style="font-size:12px;cursor:pointer;color:#3498DB;">
+                <summary style="font-size:12px;cursor:pointer;color:#0D9488;">
                     Raw metadata ({len(seq.raw_metadata)} fields)
                 </summary>
                 <table style="margin-top:6px;border-collapse:collapse;">{rows}</table>

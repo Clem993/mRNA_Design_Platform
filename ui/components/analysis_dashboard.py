@@ -32,18 +32,18 @@ def _gc_plot(report: AnalysisReport) -> pn.pane.Plotly:
     vals = report.gc_sliding_values
 
     if pos is None or len(pos) == 0:
-        return pn.pane.HTML('<div style="color:#7F8C8D;">Insufficient sequence length for GC plot.</div>')
+        return pn.pane.HTML('<div style="color:#64748B;">Insufficient sequence length for GC plot.</div>')
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=pos,
         y=vals,
         mode="lines",
-        line={"color": "#3498DB", "width": 1.5},
+        line={"color": "#0D9488", "width": 1.5},
         name="GC%",
         hovertemplate="Position: %{x}<br>GC: %{y:.1f}%<extra></extra>",
     ))
-    fig.add_hline(y=50, line_dash="dash", line_color="#E74C3C", opacity=0.5,
+    fig.add_hline(y=50, line_dash="dash", line_color="#DC2626", opacity=0.5,
                   annotation_text="50%", annotation_position="bottom right")
     fig.update_layout(
         title=dict(text="GC Content (sliding window)", font=dict(size=13)),
@@ -52,7 +52,7 @@ def _gc_plot(report: AnalysisReport) -> pn.pane.Plotly:
         yaxis=dict(range=[0, 100]),
         height=260,
         margin=dict(l=50, r=20, t=40, b=40),
-        plot_bgcolor="#FAFAFA",
+        plot_bgcolor="#F8FAFC",
         paper_bgcolor="white",
     )
     return pn.pane.Plotly(fig, sizing_mode="stretch_width")
@@ -61,20 +61,20 @@ def _gc_plot(report: AnalysisReport) -> pn.pane.Plotly:
 def _cai_card(report: AnalysisReport) -> pn.pane.HTML:
     cai = report.cai
     if cai is None:
-        return pn.pane.HTML('<div style="color:#7F8C8D;font-size:12px;">No CDS available for CAI.</div>')
+        return pn.pane.HTML('<div style="color:#64748B;font-size:12px;">No CDS available for CAI.</div>')
     pct = int(cai * 100)
-    color = "#2ECC71" if cai >= 0.7 else "#F39C12" if cai >= 0.4 else "#E74C3C"
-    bar = f'<div style="height:8px;background:#ECF0F1;border-radius:4px;">' \
+    color = "#059669" if cai >= 0.7 else "#D97706" if cai >= 0.4 else "#DC2626"
+    bar = f'<div style="height:8px;background:#E2E8F0;border-radius:4px;">' \
           f'<div style="height:8px;width:{pct}%;background:{color};border-radius:4px;"></div></div>'
     org = report.cai_organism or "unknown"
     return pn.pane.HTML(f"""
         <div style="margin-bottom:8px;">
             <span style="font-size:22px;font-weight:800;color:{color};">{cai:.3f}</span>
-            <span style="font-size:11px;color:#7F8C8D;margin-left:6px;">
+            <span style="font-size:11px;color:#64748B;margin-left:6px;">
                 CAI ({org})</span>
         </div>
         {bar}
-        <div style="font-size:10px;color:#95A5A6;margin-top:3px;">
+        <div style="font-size:10px;color:#94A3B8;margin-top:3px;">
             0.7+ = high adaptation · 0.4–0.7 = moderate · &lt;0.4 = poor</div>
     """)
 
@@ -88,11 +88,11 @@ def _validation_card(report: AnalysisReport) -> pn.pane.HTML:
     rows = ""
     for label, ok in checks:
         if ok is None:
-            icon, color = "—", "#BDC3C7"
+            icon, color = "—", "#94A3B8"
         elif ok:
-            icon, color = "✓", "#2ECC71"
+            icon, color = "✓", "#059669"
         else:
-            icon, color = "✗", "#E74C3C"
+            icon, color = "✗", "#DC2626"
         rows += (
             f'<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">'
             f'<span style="font-weight:700;color:{color};width:16px;">{icon}</span>'
@@ -104,18 +104,18 @@ def _validation_card(report: AnalysisReport) -> pn.pane.HTML:
 def _homopolymer_card(report: AnalysisReport) -> pn.pane.HTML:
     if report.homopolymer_count == 0:
         return pn.pane.HTML(
-            '<div style="color:#2ECC71;font-size:12px;">✓ No homopolymers detected '
+            '<div style="color:#059669;font-size:12px;">✓ No homopolymers detected '
             f'(min run ≥ 5 nt)</div>'
         )
     runs = report.homopolymer_runs
     rows = "".join(
         f'<tr><td style="font-family:monospace;font-size:11px;padding:2px 8px;">'
         f'{r.nucleotide}×{r.length}</td>'
-        f'<td style="font-size:11px;padding:2px 8px;color:#7F8C8D;">pos {r.start}</td></tr>'
+        f'<td style="font-size:11px;padding:2px 8px;color:#64748B;">pos {r.start}</td></tr>'
         for r in sorted(runs, key=lambda r: -r.length)[:10]
     )
     return pn.pane.HTML(
-        f'<div style="color:#E74C3C;font-size:12px;margin-bottom:6px;">'
+        f'<div style="color:#DC2626;font-size:12px;margin-bottom:6px;">'
         f'⚠ {report.homopolymer_count} homopolymer run(s) — '
         f'longest: {report.longest_homopolymer} nt</div>'
         f'<table style="border-collapse:collapse;">{rows}</table>'
@@ -126,10 +126,10 @@ def _restriction_card(report: AnalysisReport) -> pn.pane.HTML:
     present = report.restriction_enzymes_present
     if not present:
         return pn.pane.HTML(
-            '<div style="color:#2ECC71;font-size:12px;">✓ No common restriction sites found.</div>'
+            '<div style="color:#059669;font-size:12px;">✓ No common restriction sites found.</div>'
         )
     chips = " ".join(
-        f'<span style="background:#E74C3C;color:white;border-radius:3px;'
+        f'<span style="background:#DC2626;color:white;border-radius:3px;'
         f'padding:2px 6px;font-size:10px;margin:2px;">{e}</span>'
         for e in sorted(present)
     )
@@ -139,20 +139,20 @@ def _restriction_card(report: AnalysisReport) -> pn.pane.HTML:
 def _kozak_card(report: AnalysisReport) -> pn.pane.HTML:
     kz = report.kozak
     if kz is None:
-        return pn.pane.HTML('<div style="color:#7F8C8D;font-size:12px;">No Kozak context available.</div>')
-    color = {"strong": "#2ECC71", "adequate": "#F39C12", "weak": "#E74C3C"}.get(kz.strength, "#BDC3C7")
+        return pn.pane.HTML('<div style="color:#64748B;font-size:12px;">No Kozak context available.</div>')
+    color = {"strong": "#059669", "adequate": "#D97706", "weak": "#DC2626"}.get(kz.strength, "#94A3B8")
     r3_ok = "✓" if kz.has_optimal_r3 else "✗"
     return pn.pane.HTML(f"""
         <div>
             <span style="font-weight:700;color:{color};">{kz.strength.upper()}</span>
-            <span style="font-size:11px;color:#7F8C8D;margin-left:6px;">
+            <span style="font-size:11px;color:#64748B;margin-left:6px;">
                 score {kz.score:.2f}</span>
         </div>
         <div style="font-family:monospace;font-size:12px;margin:4px 0;
-                    background:#F8F9FA;padding:4px 6px;border-radius:3px;">
+                    background:#F1F5F9;padding:4px 6px;border-radius:3px;">
             {kz.context}
         </div>
-        <div style="font-size:10px;color:#7F8C8D;">
+        <div style="font-size:10px;color:#64748B;">
             -3 purine (R): {r3_ok} · ATG pos: {kz.atg_position}
         </div>
     """)
@@ -162,19 +162,19 @@ def _structure_card(report: AnalysisReport) -> pn.pane.HTML:
     s = report.structure
     if s is None or s.is_stub:
         return pn.pane.HTML(
-            '<div style="color:#7F8C8D;font-size:12px;">'
+            '<div style="color:#64748B;font-size:12px;">'
             'ViennaRNA not installed. Install with: conda install -c bioconda viennarna</div>'
         )
-    color = "#2ECC71" if s.mfe > -50 else "#F39C12" if s.mfe > -200 else "#E74C3C"
+    color = "#059669" if s.mfe > -50 else "#D97706" if s.mfe > -200 else "#DC2626"
     return pn.pane.HTML(f"""
         <div>
             <span style="font-size:18px;font-weight:700;color:{color};">
                 {s.mfe:.1f} kcal/mol</span>
-            <span style="font-size:11px;color:#7F8C8D;margin-left:6px;">MFE</span>
+            <span style="font-size:11px;color:#64748B;margin-left:6px;">MFE</span>
         </div>
         <div style="font-family:monospace;font-size:10px;
-                    word-break:break-all;color:#2C3E50;
-                    background:#F8F9FA;padding:6px;border-radius:3px;
+                    word-break:break-all;color:#0F172A;
+                    background:#F1F5F9;padding:6px;border-radius:3px;
                     max-height:80px;overflow-y:auto;margin-top:4px;">
             {s.structure[:300]}{'…' if len(s.structure) > 300 else ''}
         </div>
@@ -184,13 +184,13 @@ def _structure_card(report: AnalysisReport) -> pn.pane.HTML:
 def _metric_panel(title: str, content: pn.viewable.Viewable) -> pn.Column:
     return pn.Column(
         pn.pane.HTML(
-            f'<div style="font-size:12px;font-weight:700;color:#2C3E50;'
+            f'<div style="font-size:12px;font-weight:700;color:#0F172A;'
             f'margin-bottom:6px;">{title}</div>'
         ),
         content,
         styles={
             "background": "white",
-            "border": "1px solid #E9ECEF",
+            "border": "1px solid #CBD5E1",
             "border-radius": "6px",
             "padding": "12px 14px",
         },
@@ -213,7 +213,7 @@ class AnalysisDashboard(param.Parameterized):
         if seq is None:
             return pn.Column(
                 pn.pane.HTML(
-                    '<div style="color:#7F8C8D;padding:40px;">Select a sequence first.</div>'
+                    '<div style="color:#64748B;padding:40px;">Select a sequence first.</div>'
                 )
             )
 
@@ -224,7 +224,7 @@ class AnalysisDashboard(param.Parameterized):
         except Exception as e:
             return pn.Column(
                 pn.pane.HTML(
-                    f'<div style="color:#E74C3C;padding:20px;">Analysis error: {e}</div>'
+                    f'<div style="color:#DC2626;padding:20px;">Analysis error: {e}</div>'
                 )
             )
 
@@ -232,7 +232,7 @@ class AnalysisDashboard(param.Parameterized):
         if report.warnings:
             warn_items = "".join(f"<li>{w}</li>" for w in report.warnings)
             warnings_html = (
-                f'<div style="background:#FFF3CD;border:1px solid #FFEAA7;'
+                f'<div style="background:#FEF3C7;border:1px solid #FDE68A;'
                 f'border-radius:4px;padding:8px 12px;margin-bottom:10px;">'
                 f'<b>Warnings:</b><ul style="margin:4px 0 0 16px;font-size:12px;">'
                 f'{warn_items}</ul></div>'
@@ -248,13 +248,13 @@ class AnalysisDashboard(param.Parameterized):
         )
         summary_html = f"""
         <div style="display:flex;gap:20px;padding:12px 0;flex-wrap:wrap;">
-            <div><div style="font-size:10px;color:#7F8C8D;">LENGTH</div>
+            <div><div style="font-size:10px;color:#64748B;">LENGTH</div>
                  <div style="font-size:16px;font-weight:700;">{report.sequence_length} nt</div></div>
-            <div><div style="font-size:10px;color:#7F8C8D;">GC%</div>
+            <div><div style="font-size:10px;color:#64748B;">GC%</div>
                  <div style="font-size:16px;font-weight:700;">{gc_str}</div></div>
-            <div><div style="font-size:10px;color:#7F8C8D;">CAI</div>
+            <div><div style="font-size:10px;color:#64748B;">CAI</div>
                  <div style="font-size:16px;font-weight:700;">{cai_str}</div></div>
-            <div><div style="font-size:10px;color:#7F8C8D;">MFE</div>
+            <div><div style="font-size:10px;color:#64748B;">MFE</div>
                  <div style="font-size:16px;font-weight:700;">{mfe_str}</div></div>
         </div>
         """

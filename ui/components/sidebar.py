@@ -15,15 +15,15 @@ if TYPE_CHECKING:
 
 
 # ── Colours (mirror THEME from app.py without importing it to avoid circulars)
-_SB = "#0F172A"          # sidebar bg
-_SEP = "#1E293B"         # separator / border
-_TEXT = "#94A3B8"        # muted text
-_HEAD = "#F1F5F9"        # heading text
-_ACTIVE_BG = "#1E3A5F"  # selected row
-_ACTIVE_TEXT = "#93C5FD" # selected text (blue-300)
-_LOCAL_DOT = "#10B981"   # emerald — local
-_DB_DOT = "#6366F1"      # indigo — database
-_SECTION = "#475569"     # slate-600 — section labels
+_SB = "#0B1120"          # deep navy sidebar bg
+_SEP = "#1A2332"         # dark navy separator
+_TEXT = "#8899AA"        # cool gray text
+_HEAD = "#E8EDF2"        # near-white heading
+_ACTIVE_BG = "#0F3D3E"  # dark teal selection
+_ACTIVE_TEXT = "#5EEAD4" # teal-300 active text
+_LOCAL_DOT = "#059669"   # emerald-600 — local
+_DB_DOT = "#0D9488"      # teal-600 — database
+_SECTION = "#5A6B7D"     # steel gray — section labels
 
 
 class RegistrySidebar(param.Parameterized):
@@ -54,11 +54,15 @@ class RegistrySidebar(param.Parameterized):
 
         # ── Logo / title ────────────────────────────────────────────────────
         children.append(pn.pane.HTML(
-            f'<div style="padding:16px 12px 10px 12px;">'
-            f'<div style="font-size:14px;font-weight:800;color:{_HEAD};'
-            f'letter-spacing:0.3px;">mRNA Studio</div>'
-            f'<div style="font-size:10px;color:{_SECTION};margin-top:1px;">'
-            f'Design · Analyze · Assemble</div></div>',
+            f'<div style="padding:18px 14px 12px 14px;">'
+            f'<div style="font-size:11px;font-weight:600;color:#5EEAD4;'
+            f'letter-spacing:2px;text-transform:uppercase;margin-bottom:2px;">'
+            f'mRNA</div>'
+            f'<div style="font-size:15px;font-weight:700;color:{_HEAD};'
+            f'letter-spacing:0.2px;">Design Studio</div>'
+            f'<div style="font-size:9px;color:{_SECTION};margin-top:3px;'
+            f'letter-spacing:1.5px;text-transform:uppercase;">'
+            f'Sequence Engineering Platform</div></div>',
             sizing_mode="stretch_width",
             margin=0,
         ))
@@ -78,9 +82,9 @@ class RegistrySidebar(param.Parameterized):
                     margin=(2, 8),
                     stylesheets=[f"""
                         :host .bk-btn {{
-                            background: {'#1E3A5F' if is_active else '#1E293B'};
-                            color: {'#93C5FD' if is_active else '#94A3B8'};
-                            border: {'1px solid #312E81' if is_active else 'none'};
+                            background: {'#0F3D3E' if is_active else '#162032'};
+                            color: {'#5EEAD4' if is_active else '#8899AA'};
+                            border: {'1px solid #134E4A' if is_active else 'none'};
                             border-radius: 4px;
                             font-size: 11px;
                             text-align: left;
@@ -88,7 +92,7 @@ class RegistrySidebar(param.Parameterized):
                             font-weight: {'600' if is_active else '400'};
                         }}
                         :host .bk-btn:hover {{
-                            background: #1E3A5F;
+                            background: #0F3D3E;
                         }}
                     """],
                 )
@@ -123,8 +127,8 @@ class RegistrySidebar(param.Parameterized):
                     margin=(2, 8),
                     stylesheets=["""
                         :host .bk-btn {
-                            background: #1E293B;
-                            color: #94A3B8;
+                            background: #162032;
+                            color: #8899AA;
                             border: none;
                             border-radius: 4px;
                             font-size: 11px;
@@ -132,7 +136,7 @@ class RegistrySidebar(param.Parameterized):
                             padding: 5px 10px;
                         }
                         :host .bk-btn:hover {
-                            background: #334155;
+                            background: #1A2B3E;
                         }
                     """],
                 )
@@ -153,15 +157,15 @@ class RegistrySidebar(param.Parameterized):
             for model_reg in self._state.model_registry.all_models:
                 model_name = model_reg.model.name
                 if model_reg.model_type == "scoring":
-                    type_color, type_label, icon = "#3B82F6", "ANALYTICAL", "📊"
+                    type_color, type_label, icon = "#0284C7", "ANALYTICAL", "📊"
                 else:
-                    type_color, type_label, icon = "#8B5CF6", "GENERATIVE", "🧪"
+                    type_color, type_label, icon = "#7C3AED", "GENERATIVE", "🧪"
                 if model_reg.source == "catalog":
-                    src_color, src_label = "#10B981", "IMPORTED"
+                    src_color, src_label = "#059669", "IMPORTED"
                 elif model_reg.source == "api":
-                    src_color, src_label = "#F59E0B", "API"
+                    src_color, src_label = "#D97706", "API"
                 else:
-                    src_color, src_label = "#6366F1", "BUILTIN"
+                    src_color, src_label = "#0D9488", "BUILTIN"
                 repo_line = ""
                 if model_reg.repository:
                     repo_line = (
@@ -170,8 +174,8 @@ class RegistrySidebar(param.Parameterized):
                         f'white-space:nowrap;">via {model_reg.repository}</div>'
                     )
                 children.append(pn.pane.HTML(
-                    f'<div style="background:#1E293B;border-radius:4px;padding:6px 10px;margin:2px 8px;">'
-                    f'<div style="font-size:11px;color:#94A3B8;">{icon} {model_name}</div>'
+                    f'<div style="background:#162032;border-radius:4px;padding:6px 10px;margin:2px 8px;">'
+                    f'<div style="font-size:11px;color:#8899AA;">{icon} {model_name}</div>'
                     f'<div style="margin-top:3px;">'
                     f'<span style="background:{type_color}33;color:{type_color};padding:1px 5px;'
                     f'border-radius:8px;font-size:8px;font-weight:600;">{type_label}</span> '
@@ -196,9 +200,9 @@ class RegistrySidebar(param.Parameterized):
         if self._state.backbone_library:
             for bb in self._state.backbone_library:
                 children.append(pn.pane.HTML(
-                    f'<div style="background:#1E293B;border-radius:4px;padding:5px 10px;margin:2px 8px;">'
-                    f'<div style="font-size:11px;color:#94A3B8;">🧬 {bb.name}</div>'
-                    f'<div style="font-size:9px;color:#475569;">{bb.length:,} bp</div>'
+                    f'<div style="background:#162032;border-radius:4px;padding:5px 10px;margin:2px 8px;">'
+                    f'<div style="font-size:11px;color:#8899AA;">🧬 {bb.name}</div>'
+                    f'<div style="font-size:9px;color:#5A6B7D;">{bb.length:,} bp</div>'
                     f'</div>',
                     sizing_mode="stretch_width",
                     margin=0,
@@ -232,9 +236,9 @@ class RegistrySidebar(param.Parameterized):
             margin=(4, 8),
             stylesheets=["""
                 :host .bk-btn-light .bk-btn {
-                    background: #1E293B;
-                    color: #93C5FD;
-                    border: 1px solid #312E81;
+                    background: #0F3D3E;
+                    color: #5EEAD4;
+                    border: 1px solid #134E4A;
                     border-radius: 6px;
                     font-size: 12px;
                     font-weight: 600;
@@ -242,7 +246,7 @@ class RegistrySidebar(param.Parameterized):
                     text-align: left;
                 }
                 :host .bk-btn-light .bk-btn:hover {
-                    background: #1E3A5F;
+                    background: #115E5B;
                 }
             """],
         )

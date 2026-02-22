@@ -161,7 +161,7 @@ class PlasmidAssemblyPanel(param.Parameterized):
             pn.pane.HTML('<div style="font-size:14px;font-weight:700;color:#0F172A;margin-bottom:4px;">3. Select Worklist</div>'),
             pn.pane.HTML(
                 f'<div style="font-size:12px;color:#0F172A;font-weight:600;">'
-                f'📋 {wl.name if wl else "No worklist"} ({wl.count if wl else 0} sequences)</div>'
+                f'{wl.name if wl else "No worklist"} ({wl.count if wl else 0} sequences)</div>'
                 f'{worklist_info}'
             ),
             sizing_mode="stretch_width",
@@ -170,7 +170,7 @@ class PlasmidAssemblyPanel(param.Parameterized):
 
         # ── Assemble Button ───────────────────────────────────────────────────
         assemble_btn = pn.widgets.Button(
-            name="▶ Assemble",
+            name="Assemble",
             button_type="success",
             width=150,
             margin=(12, 4),
@@ -289,9 +289,9 @@ class PlasmidAssemblyPanel(param.Parameterized):
 
         self._preview_pane.object = (
             f'<div style="background:#F0FDFA;border:1px solid #0D9488;border-radius:6px;padding:14px;margin-bottom:8px;">'
-            f'<div style="font-weight:700;color:#0F766E;margin-bottom:6px;">🧬 {backbone.name}</div>'
+            f'<div style="font-weight:700;color:#0F766E;margin-bottom:6px;">{backbone.name}</div>'
             f'<div style="margin-bottom:6px;">{features_html}</div>'
-            f'<div style="font-size:12px;color:#134E4A;">↕ Insert: {wl.name} ({wl.count} sequences)</div>'
+            f'<div style="font-size:12px;color:#134E4A;">Insert: {wl.name} ({wl.count} sequences)</div>'
             f'<div style="font-size:12px;color:#134E4A;margin-top:4px;">Strategy: {strategy_desc}</div>'
             f'<div style="font-size:12px;color:#134E4A;">Estimated size: {min_size:,} - {max_size:,} bp</div>'
             f'</div>'
@@ -314,17 +314,17 @@ class PlasmidAssemblyPanel(param.Parameterized):
                     pass
 
             if conflicts == 0:
-                qc_items.append(f'<div style="color:#10B981;font-size:12px;">✓ No {"/".join(cloning_enzymes)} sites in inserts</div>')
+                qc_items.append(f'<div style="color:#10B981;font-size:12px;">Pass — No {"/".join(cloning_enzymes)} sites in inserts</div>')
             else:
-                qc_items.append(f'<div style="color:#EF4444;font-size:12px;">✗ {conflicts} insert(s) contain {"/".join(cloning_enzymes)} sites</div>')
+                qc_items.append(f'<div style="color:#EF4444;font-size:12px;">Fail — {conflicts} insert(s) contain {"/".join(cloning_enzymes)} sites</div>')
                 warnings += conflicts
 
         # Check CDS in-frame
         not_in_frame = sum(1 for item in wl.items if item.sequence.cds and len(item.sequence.cds) % 3 != 0)
         if not_in_frame == 0:
-            qc_items.append('<div style="color:#10B981;font-size:12px;">✓ All inserts in frame</div>')
+            qc_items.append('<div style="color:#10B981;font-size:12px;">Pass — All inserts in frame</div>')
         else:
-            qc_items.append(f'<div style="color:#F59E0B;font-size:12px;">⚠ {not_in_frame} insert(s) not in frame (CDS not divisible by 3)</div>')
+            qc_items.append(f'<div style="color:#F59E0B;font-size:12px;">Warning — {not_in_frame} insert(s) not in frame (CDS not divisible by 3)</div>')
             warnings += not_in_frame
 
         # Check for stop codons
@@ -337,17 +337,17 @@ class PlasmidAssemblyPanel(param.Parameterized):
                     missing_stop += 1
 
         if missing_stop == 0:
-            qc_items.append('<div style="color:#10B981;font-size:12px;">✓ All inserts have stop codon</div>')
+            qc_items.append('<div style="color:#10B981;font-size:12px;">Pass — All inserts have stop codon</div>')
         else:
-            qc_items.append(f'<div style="color:#F59E0B;font-size:12px;">⚠ {missing_stop} insert(s) lack stop codon</div>')
+            qc_items.append(f'<div style="color:#F59E0B;font-size:12px;">Warning — {missing_stop} insert(s) lack stop codon</div>')
             warnings += missing_stop
 
         # Size validation
         oversized = sum(1 for item in wl.items if backbone.length + item.sequence.length > 15000)
         if oversized == 0:
-            qc_items.append('<div style="color:#10B981;font-size:12px;">✓ All assemblies within size limits</div>')
+            qc_items.append('<div style="color:#10B981;font-size:12px;">Pass — All assemblies within size limits</div>')
         else:
-            qc_items.append(f'<div style="color:#F59E0B;font-size:12px;">⚠ {oversized} assembly(ies) exceed 15 kb</div>')
+            qc_items.append(f'<div style="color:#F59E0B;font-size:12px;">Warning — {oversized} assembly(ies) exceed 15 kb</div>')
 
         self._qc_pane.object = (
             f'<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:12px;margin-bottom:8px;">'
@@ -378,7 +378,7 @@ class PlasmidAssemblyPanel(param.Parameterized):
             f'<div style="background:#ECFDF5;border:1px solid #10B981;border-radius:6px;padding:12px;">'
             f'<div style="font-weight:700;color:#065F46;">Assembly Complete</div>'
             f'<div style="font-size:12px;color:#047857;margin-top:4px;">'
-            f'✓ {assembled_count} plasmid(s) assembled'
+            f'{assembled_count} plasmid(s) assembled'
             f'{f", {warnings} QC warning(s)" if warnings else ""}</div>'
             f'</div>'
         )

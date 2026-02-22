@@ -90,19 +90,19 @@ class ModelRepositoryPanel(param.Parameterized):
 
         # Deployment badge
         if entry.deployment == "embedded":
-            deploy_badge = f'<span style="background:{_EMBEDDED_BADGE}22;color:{_EMBEDDED_BADGE};padding:2px 6px;border-radius:10px;font-size:10px;">💻 Embedded</span>'
+            deploy_badge = f'<span style="background:{_EMBEDDED_BADGE}22;color:{_EMBEDDED_BADGE};padding:2px 6px;border-radius:10px;font-size:10px;">Embedded</span>'
         elif entry.deployment == "api":
-            deploy_badge = f'<span style="background:{_API_BADGE}22;color:{_API_BADGE};padding:2px 6px;border-radius:10px;font-size:10px;">☁️ API</span>'
+            deploy_badge = f'<span style="background:{_API_BADGE}22;color:{_API_BADGE};padding:2px 6px;border-radius:10px;font-size:10px;">API</span>'
         else:
-            deploy_badge = f'<span style="background:{_EMBEDDED_BADGE}22;color:{_EMBEDDED_BADGE};padding:2px 6px;border-radius:10px;font-size:10px;">💻☁️ Both</span>'
+            deploy_badge = f'<span style="background:{_EMBEDDED_BADGE}22;color:{_EMBEDDED_BADGE};padding:2px 6px;border-radius:10px;font-size:10px;">Both</span>'
 
         # Repository icon
         if "github.com" in entry.repository:
-            repo_icon = "🔗"
+            repo_icon = ""
         elif "huggingface" in entry.repository:
-            repo_icon = "🤗"
+            repo_icon = ""
         else:
-            repo_icon = "📄"
+            repo_icon = ""
 
         # Status area
         status_pane = pn.pane.HTML("", sizing_mode="stretch_width")
@@ -113,7 +113,7 @@ class ModelRepositoryPanel(param.Parameterized):
             action_widget = pn.pane.HTML(
                 f'<span style="background:{_IMPORTED_BADGE}22;color:{_IMPORTED_BADGE};'
                 f'padding:4px 12px;border-radius:4px;font-size:11px;font-weight:600;">'
-                f'✓ Imported</span>',
+                f'Imported</span>',
                 margin=(4, 0),
             )
         else:
@@ -139,12 +139,12 @@ class ModelRepositoryPanel(param.Parameterized):
             f'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
             f'<div style="flex:1;">'
             f'<div style="font-size:14px;font-weight:700;color:#0F172A;margin-bottom:4px;">'
-            f'{entry.icon} {entry.name} <span style="font-size:10px;color:#94A3B8;font-weight:400;">v{entry.version}</span></div>'
+            f'{entry.name} <span style="font-size:10px;color:#94A3B8;font-weight:400;">v{entry.version}</span></div>'
             f'<div style="margin-bottom:6px;">{type_badge} '
             f'<span style="background:#F1F5F9;color:#475569;padding:2px 6px;border-radius:10px;font-size:10px;">{entry.category}</span> '
             f'{deploy_badge}</div>'
             f'<div style="font-size:12px;color:#475569;margin-bottom:6px;line-height:1.4;">{entry.description}</div>'
-            f'<div style="font-size:11px;color:#94A3B8;">{repo_icon} {entry.repository}</div>'
+            f'<div style="font-size:11px;color:#94A3B8;">{entry.repository}</div>'
             f'<div style="font-size:10px;color:#94A3B8;margin-top:2px;">Input: {entry.inputs}</div>'
             f'</div>'
             f'</div>'
@@ -170,21 +170,21 @@ class ModelRepositoryPanel(param.Parameterized):
             # Step 1: Connecting
             status.object = (
                 '<div style="font-size:11px;color:#0D9488;padding:4px 0;">'
-                '⏳ Connecting to repository...</div>'
+                'Connecting to repository...</div>'
             )
             time.sleep(0.8)
 
             # Step 2: Downloading
             status.object = (
                 '<div style="font-size:11px;color:#0D9488;padding:4px 0;">'
-                '📥 Downloading model...</div>'
+                'Downloading model...</div>'
             )
             time.sleep(0.8)
 
             # Step 3: Registering
             status.object = (
                 '<div style="font-size:11px;color:#0D9488;padding:4px 0;">'
-                '🔧 Registering model...</div>'
+                'Registering model...</div>'
             )
             time.sleep(0.5)
 
@@ -194,7 +194,7 @@ class ModelRepositoryPanel(param.Parameterized):
             # Step 4: Done
             status.object = (
                 f'<div style="font-size:11px;color:{_IMPORTED_BADGE};padding:4px 0;">'
-                f'✓ Successfully imported {entry.name}</div>'
+                f'Successfully imported {entry.name}</div>'
             )
             self._imported_names.add(entry.name)
             self._state.param.trigger("model_registry")

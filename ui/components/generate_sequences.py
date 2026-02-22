@@ -64,7 +64,7 @@ class GenerateSequencesPanel(param.Parameterized):
 
         # ── Built-in Tools ────────────────────────────────────────────────────
         clean_btn = pn.widgets.Button(
-            name="🧹 Clean for Cloning",
+            name="Clean for Cloning",
             button_type="primary",
             width=180,
             margin=(4, 4),
@@ -72,7 +72,7 @@ class GenerateSequencesPanel(param.Parameterized):
         clean_btn.on_click(lambda e: self._run_clean_for_cloning(input_mode.value, single_seq_input.value))
 
         optimize_btn = pn.widgets.Button(
-            name="🔧 Codon Optimization",
+            name="Codon Optimization",
             button_type="primary",
             width=180,
             margin=(4, 4),
@@ -106,7 +106,7 @@ class GenerateSequencesPanel(param.Parameterized):
         def toggle_clean_settings(event):
             clean_settings.visible = not clean_settings.visible
 
-        clean_settings_toggle = pn.widgets.Button(name="⚙", button_type="light", width=35, margin=(4, 0))
+        clean_settings_toggle = pn.widgets.Button(name="Settings", button_type="light", width=70, margin=(4, 0))
         clean_settings_toggle.on_click(toggle_clean_settings)
 
         # Codon optimization settings
@@ -133,7 +133,7 @@ class GenerateSequencesPanel(param.Parameterized):
             self._opt_min_cai,
         ])
 
-        opt_settings_toggle = pn.widgets.Button(name="⚙", button_type="light", width=35, margin=(4, 0))
+        opt_settings_toggle = pn.widgets.Button(name="Settings", button_type="light", width=70, margin=(4, 0))
         opt_settings_toggle.on_click(lambda e: setattr(opt_settings, "visible", not opt_settings.visible))
 
         builtin_section = pn.Column(
@@ -158,7 +158,7 @@ class GenerateSequencesPanel(param.Parameterized):
             model_buttons = []
             for model_reg in gen_models:
                 btn = pn.widgets.Button(
-                    name=f"🧪 {model_reg.model.name}",
+                    name=f"{model_reg.model.name}",
                     button_type="light",
                     width=180,
                     margin=(4, 4),
@@ -322,7 +322,7 @@ class GenerateSequencesPanel(param.Parameterized):
                 f'Length: {len(result.original)} → {len(result.cleaned)} ({len_str}) | '
                 f'Sites removed: {result.restriction_sites_removed} | '
                 f'Homopolymers flagged: {result.homopolymers_shortened}'
-                f'{"| Double stop: ✓" if result.double_stop_added else ""}'
+                f'{"| Double stop: Yes" if result.double_stop_added else ""}'
                 f'</div>'
                 f'{changes_html}'
                 f'</div>'
@@ -330,7 +330,7 @@ class GenerateSequencesPanel(param.Parameterized):
 
         summary = (
             f'<div style="font-weight:700;color:#10B981;margin-bottom:8px;">'
-            f'✓ Cleaned {len(self._generated_sequences)} sequence(s) for cloning</div>'
+            f'Cleaned {len(self._generated_sequences)} sequence(s) for cloning</div>'
         )
         self._output_pane.append(pn.pane.HTML(summary + "".join(results_html), sizing_mode="stretch_width"))
         if self._generated_sequences:
@@ -391,7 +391,7 @@ class GenerateSequencesPanel(param.Parameterized):
 
         summary = (
             f'<div style="font-weight:700;color:#10B981;margin-bottom:8px;">'
-            f'✓ Optimized {len(self._generated_sequences)} sequence(s) for {self._opt_organism.value}</div>'
+            f'Optimized {len(self._generated_sequences)} sequence(s) for {self._opt_organism.value}</div>'
         )
         self._output_pane.append(pn.pane.HTML(summary + "".join(results_html), sizing_mode="stretch_width"))
         if self._generated_sequences:
@@ -422,7 +422,7 @@ class GenerateSequencesPanel(param.Parameterized):
                 self._output_pane.clear()
                 self._output_pane.append(pn.pane.HTML(
                     f'<div style="font-weight:700;color:#10B981;margin-bottom:8px;">'
-                    f'✓ Generated {len(results)} sequence(s) with {model.name}</div>'
+                    f'Generated {len(results)} sequence(s) with {model.name}</div>'
                     f'{results_html}'
                 ))
                 self._worklist_name_input.value = f"{model.name} Output"

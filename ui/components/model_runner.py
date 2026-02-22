@@ -206,11 +206,11 @@ class ModelRunnerPanel(param.Parameterized):
             self._state.param.trigger("model_registry")
             names = ", ".join(m.name for m in loaded)
             self._status_pane.object = (
-                f'<div style="color:#059669;font-size:12px;">✓ Loaded: {names}</div>'
+                f'<div style="color:#059669;font-size:12px;">Loaded: {names}</div>'
             )
         except Exception as e:
             self._status_pane.object = (
-                f'<div style="color:#DC2626;font-size:12px;">✗ {e}</div>'
+                f'<div style="color:#DC2626;font-size:12px;">Error: {e}</div>'
             )
 
     def _on_register_api(self, event: object) -> None:
@@ -228,11 +228,11 @@ class ModelRunnerPanel(param.Parameterized):
                 self._state.model_registry.register_api_generator(endpoint, name, key)
             self._state.param.trigger("model_registry")
             self._status_pane.object = (
-                f'<div style="color:#059669;font-size:12px;">✓ Registered API: {name}</div>'
+                f'<div style="color:#059669;font-size:12px;">Registered API: {name}</div>'
             )
         except Exception as e:
             self._status_pane.object = (
-                f'<div style="color:#DC2626;font-size:12px;">✗ {e}</div>'
+                f'<div style="color:#DC2626;font-size:12px;">Error: {e}</div>'
             )
 
     def _on_run_scoring(self, event: object) -> None:
@@ -254,11 +254,11 @@ class ModelRunnerPanel(param.Parameterized):
             self._state.param.trigger("worklist")
             self._status_pane.object = (
                 f'<div style="color:#059669;font-size:12px;">'
-                f'✓ Scored {len(sequences)} sequences with {model_name}</div>'
+                f'Scored {len(sequences)} sequences with {model_name}</div>'
             )
         except Exception as e:
             self._status_pane.object = (
-                f'<div style="color:#DC2626;font-size:12px;">✗ Scoring failed: {e}</div>'
+                f'<div style="color:#DC2626;font-size:12px;">Scoring failed: {e}</div>'
             )
 
     def _on_run_generation(self, event: object) -> None:
@@ -272,9 +272,9 @@ class ModelRunnerPanel(param.Parameterized):
             self._state.param.trigger("worklist")
             self._status_pane.object = (
                 f'<div style="color:#059669;font-size:12px;">'
-                f'✓ Generated {len(new_seqs)} sequences → added to worklist</div>'
+                f'Generated {len(new_seqs)} sequences — added to worklist</div>'
             )
         except Exception as e:
             self._status_pane.object = (
-                f'<div style="color:#DC2626;font-size:12px;">✗ Generation failed: {e}</div>'
+                f'<div style="color:#DC2626;font-size:12px;">Generation failed: {e}</div>'
             )

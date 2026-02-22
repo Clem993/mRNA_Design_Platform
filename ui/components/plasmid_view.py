@@ -265,7 +265,7 @@ class PlasmidView(param.Parameterized):
             f'<div style="background:#F0FDFA;border:1px solid #0D9488;border-radius:6px;'\
             f'padding:16px;margin-top:12px;">'\
             f'<div style="font-weight:700;color:#0F766E;margin-bottom:8px;">'\
-            f'✓ Combination Preview ({combo_count} sequences)</div>'\
+            f'Combination Preview ({combo_count} sequences)</div>'\
             f'<div style="font-size:12px;color:#134E4A;">'\
             f'{preview_html}'\
             f'</div></div>'

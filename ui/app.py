@@ -32,13 +32,13 @@ from ui.components.generate_sequences import GenerateSequencesPanel
 
 # ── Design tokens ─────────────────────────────────────────────────────────────
 THEME = {
-    "sidebar_bg":      "#0B1120",   # deep navy
-    "sidebar_border":  "#1A2332",   # dark navy border
-    "sidebar_text":    "#8899AA",   # cool gray text
-    "sidebar_heading": "#E8EDF2",   # near-white heading
-    "sidebar_hover":   "#162032",   # subtle hover
-    "sidebar_active_bg": "#0F3D3E", # dark teal selection
-    "sidebar_active_text": "#5EEAD4", # teal-300
+    "sidebar_bg":      "#FFFFFF",   # white
+    "sidebar_border":  "#E2E8F0",   # slate-200 border
+    "sidebar_text":    "#334155",   # slate-700 — readable on white
+    "sidebar_heading": "#0F172A",   # slate-950 heading
+    "sidebar_hover":   "#F8FAFC",   # slate-50 hover
+    "sidebar_active_bg": "#F0FDFA", # teal-50 selection
+    "sidebar_active_text": "#0D9488", # teal-600 on white
 
     "accent":          "#0D9488",   # teal-600 — primary science accent
     "accent_light":    "#14B8A6",   # teal-500
@@ -204,7 +204,7 @@ class StudioApp(param.Parameterized):
             title="mRNA Design Studio",
             sidebar=[pn.panel(self._sidebar_comp.panel)],
             sidebar_width=250,
-            header_background=THEME["sidebar_bg"],
+            header_background="#0F172A",
             accent_base_color=THEME["accent"],
             theme_toggle=False,
         )

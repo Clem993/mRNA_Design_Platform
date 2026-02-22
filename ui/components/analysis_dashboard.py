@@ -90,12 +90,12 @@ def _validation_card(report: AnalysisReport) -> pn.pane.HTML:
         if ok is None:
             icon, color = "—", "#94A3B8"
         elif ok:
-            icon, color = "✓", "#059669"
+            icon, color = "Pass", "#059669"
         else:
-            icon, color = "✗", "#DC2626"
+            icon, color = "Fail", "#DC2626"
         rows += (
             f'<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">'
-            f'<span style="font-weight:700;color:{color};width:16px;">{icon}</span>'
+            f'<span style="font-weight:700;color:{color};width:32px;font-size:11px;">{icon}</span>'
             f'<span style="font-size:12px;">{label}</span></div>'
         )
     return pn.pane.HTML(rows)
@@ -104,7 +104,7 @@ def _validation_card(report: AnalysisReport) -> pn.pane.HTML:
 def _homopolymer_card(report: AnalysisReport) -> pn.pane.HTML:
     if report.homopolymer_count == 0:
         return pn.pane.HTML(
-            '<div style="color:#059669;font-size:12px;">✓ No homopolymers detected '
+            '<div style="color:#059669;font-size:12px;">No homopolymers detected '
             f'(min run ≥ 5 nt)</div>'
         )
     runs = report.homopolymer_runs
@@ -116,7 +116,7 @@ def _homopolymer_card(report: AnalysisReport) -> pn.pane.HTML:
     )
     return pn.pane.HTML(
         f'<div style="color:#DC2626;font-size:12px;margin-bottom:6px;">'
-        f'⚠ {report.homopolymer_count} homopolymer run(s) — '
+        f'{report.homopolymer_count} homopolymer run(s) — '
         f'longest: {report.longest_homopolymer} nt</div>'
         f'<table style="border-collapse:collapse;">{rows}</table>'
     )
@@ -126,14 +126,14 @@ def _restriction_card(report: AnalysisReport) -> pn.pane.HTML:
     present = report.restriction_enzymes_present
     if not present:
         return pn.pane.HTML(
-            '<div style="color:#059669;font-size:12px;">✓ No common restriction sites found.</div>'
+            '<div style="color:#059669;font-size:12px;">No common restriction sites found.</div>'
         )
     chips = " ".join(
         f'<span style="background:#DC2626;color:white;border-radius:3px;'
         f'padding:2px 6px;font-size:10px;margin:2px;">{e}</span>'
         for e in sorted(present)
     )
-    return pn.pane.HTML(f'<div>⚠ Sites present: {chips}</div>')
+    return pn.pane.HTML(f'<div>Sites present: {chips}</div>')
 
 
 def _kozak_card(report: AnalysisReport) -> pn.pane.HTML:
@@ -141,7 +141,7 @@ def _kozak_card(report: AnalysisReport) -> pn.pane.HTML:
     if kz is None:
         return pn.pane.HTML('<div style="color:#64748B;font-size:12px;">No Kozak context available.</div>')
     color = {"strong": "#059669", "adequate": "#D97706", "weak": "#DC2626"}.get(kz.strength, "#94A3B8")
-    r3_ok = "✓" if kz.has_optimal_r3 else "✗"
+    r3_ok = "Yes" if kz.has_optimal_r3 else "No"
     return pn.pane.HTML(f"""
         <div>
             <span style="font-weight:700;color:{color};">{kz.strength.upper()}</span>

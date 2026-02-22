@@ -105,7 +105,7 @@ class WorklistView(param.Parameterized):
         )
 
         run_analysis_btn = pn.widgets.Button(
-            name="▶ Run",
+            name="Run",
             button_type="success",
             width=80,
             margin=(4, 4),
@@ -114,13 +114,13 @@ class WorklistView(param.Parameterized):
 
         # Analysis settings gear button
         settings_btn = pn.widgets.Button(
-            name="⚙",
+            name="Settings",
             button_type="light",
-            width=40,
+            width=70,
             margin=(4, 0),
             stylesheets=["""
                 :host .bk-btn {
-                    font-size: 16px;
+                    font-size: 11px;
                     padding: 4px;
                     border-radius: 4px;
                 }

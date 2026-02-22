@@ -164,8 +164,8 @@ class GenerateSequencesPanel(param.Parameterized):
                     margin=(4, 4),
                     stylesheets=["""
                         :host .bk-btn {
-                            border: 1px solid #8B5CF6;
-                            color: #7C3AED;
+                            border: 1px solid #6D28D9;
+                            color: #6D28D9;
                             font-size: 11px;
                         }
                     """],
@@ -190,7 +190,7 @@ class GenerateSequencesPanel(param.Parameterized):
                     'Imported Generative Models</div>'
                     '<div style="font-size:12px;color:#94A3B8;margin-bottom:8px;">'
                     'No generative models imported. Use the '
-                    '<span style="color:#6366F1;font-weight:600;">Model Repository</span> '
+                    '<span style="color:#0D9488;font-weight:600;">Model Repository</span> '
                     'tab to import models.</div>'
                 ),
                 sizing_mode="stretch_width",
@@ -404,7 +404,7 @@ class GenerateSequencesPanel(param.Parameterized):
 
         model = model_reg.model
         self._output_pane.append(pn.pane.HTML(
-            f'<div style="font-size:12px;color:#6366F1;margin-bottom:8px;">'
+            f'<div style="font-size:12px;color:#0D9488;margin-bottom:8px;">'
             f'Running {model.name}...</div>'
         ))
 

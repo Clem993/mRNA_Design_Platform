@@ -144,12 +144,12 @@ class WorklistView(param.Parameterized):
             stylesheets=["""
                 :host .bk-btn {
                     font-size: 11px;
-                    color: #6366F1;
-                    border: 1px solid #6366F1;
+                    color: #0D9488;
+                    border: 1px solid #0D9488;
                     border-radius: 4px;
                 }
                 :host .bk-btn:hover {
-                    background: #EEF2FF;
+                    background: #F0FDFA;
                 }
             """],
         )
@@ -157,7 +157,7 @@ class WorklistView(param.Parameterized):
         toolbar = pn.Row(
             pn.pane.HTML(
                 f'<div style="font-size:16px;font-weight:800;padding:8px 0;">'
-                f'{wl.name} <span style="color:#7F8C8D;font-size:13px;">({wl.count} items)</span></div>'
+                f'{wl.name} <span style="color:#64748B;font-size:13px;">({wl.count} items)</span></div>'
             ),
             pn.layout.HSpacer(),
             create_wl_btn,
@@ -185,13 +185,13 @@ class WorklistView(param.Parameterized):
                 create_confirm_btn,
                 create_cancel_btn,
                 sizing_mode="stretch_width",
-                styles={"background": "#EEF2FF", "padding": "8px", "border-radius": "6px", "margin": "4px 0"},
+                styles={"background": "#F0FDFA", "padding": "8px", "border-radius": "6px", "margin": "4px 0"},
             ),
         ])
 
         if wl.count == 0:
             table_or_empty: pn.viewable.Viewable = pn.pane.HTML(
-                '<div style="color:#7F8C8D;padding:30px;text-align:center;">'
+                '<div style="color:#64748B;padding:30px;text-align:center;">'
                 'Worklist is empty. Import sequences from a database to get started.</div>'
             )
             create_wl_btn.visible = False

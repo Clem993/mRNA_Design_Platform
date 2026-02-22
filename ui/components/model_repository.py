@@ -20,12 +20,12 @@ if TYPE_CHECKING:
 
 
 _CARD_BG = "#FFFFFF"
-_CARD_BORDER = "#E2E8F0"
-_ANALYTICAL_BADGE = "#3B82F6"
-_GENERATIVE_BADGE = "#8B5CF6"
-_EMBEDDED_BADGE = "#10B981"
-_API_BADGE = "#F59E0B"
-_IMPORTED_BADGE = "#10B981"
+_CARD_BORDER = "#CBD5E1"
+_ANALYTICAL_BADGE = "#0284C7"    # sky-600
+_GENERATIVE_BADGE = "#7C3AED"    # violet-600
+_EMBEDDED_BADGE = "#059669"      # emerald-600
+_API_BADGE = "#D97706"           # amber-600
+_IMPORTED_BADGE = "#059669"      # emerald-600
 
 
 class ModelRepositoryPanel(param.Parameterized):
@@ -169,21 +169,21 @@ class ModelRepositoryPanel(param.Parameterized):
         def _run_import():
             # Step 1: Connecting
             status.object = (
-                '<div style="font-size:11px;color:#6366F1;padding:4px 0;">'
+                '<div style="font-size:11px;color:#0D9488;padding:4px 0;">'
                 '⏳ Connecting to repository...</div>'
             )
             time.sleep(0.8)
 
             # Step 2: Downloading
             status.object = (
-                '<div style="font-size:11px;color:#6366F1;padding:4px 0;">'
+                '<div style="font-size:11px;color:#0D9488;padding:4px 0;">'
                 '📥 Downloading model...</div>'
             )
             time.sleep(0.8)
 
             # Step 3: Registering
             status.object = (
-                '<div style="font-size:11px;color:#6366F1;padding:4px 0;">'
+                '<div style="font-size:11px;color:#0D9488;padding:4px 0;">'
                 '🔧 Registering model...</div>'
             )
             time.sleep(0.5)

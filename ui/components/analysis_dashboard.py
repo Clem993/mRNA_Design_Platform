@@ -39,7 +39,7 @@ def _gc_plot(report: AnalysisReport) -> pn.pane.Plotly:
         x=pos,
         y=vals,
         mode="lines",
-        line={"color": "#0D9488", "width": 1.5},
+        line={"color": "#0F766E", "width": 1.5},
         name="GC%",
         hovertemplate="Position: %{x}<br>GC: %{y:.1f}%<extra></extra>",
     ))

@@ -50,3 +50,6 @@ htmlcov/
 
 # Export files
 worklist_export.csv
+
+# Environment / secrets
+.env

@@ -5,8 +5,8 @@
 #    make setup        # one-time: installs uv, Python 3.13, and all deps
 #    make run          # start the app → http://localhost:5007
 # ─────────────────────────────────────────────────────────────────────────────
-.PHONY: help setup run run-debug kill restart clean test lint \
-        db-up db-down db-status
+.PHONY: help setup run run-debug run-secure kill restart clean test lint \
+        db-up db-down db-status docker-build docker-run
 
 # ── OS detection ──────────────────────────────────────────────────────────────
 # $(OS) is set to "Windows_NT" on Windows by the shell; empty on macOS/Linux.
@@ -83,6 +83,17 @@ _install-deps:
 run: _check-venv ## Start the app → http://localhost:5007
 	$(PYTHON) -m ui.app
 
+run-secure: _check-venv ## Start with password protection (.env must exist)
+	@if [ ! -f .env ]; then \
+		echo ""; \
+		echo "  No .env file found. Copy the template first:"; \
+		echo "    cp .env.example .env"; \
+		echo "  Then set MRNA_STUDIO_PASSWORD in .env"; \
+		echo ""; \
+		exit 1; \
+	fi
+	MRNA_STUDIO_RELOAD=1 $(PYTHON) -m ui.app
+
 run-debug: _check-venv ## Start with DEBUG-level logging
 	LOG_LEVEL=DEBUG $(PYTHON) -c "\
 		import logging, sys, os; \
@@ -125,6 +136,13 @@ db-down: ## Stop the demo database
 
 db-status: ## Check database container status
 	@docker ps --filter name=mrna_studio_demo_db --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || echo "Container not running"
+
+# ── Docker (production) ──────────────────────────────────────────────────────
+docker-build: ## Build production Docker image
+	docker build -t mrna-studio .
+
+docker-run: ## Run container with .env file (password-protected)
+	docker run --rm -p 5007:5007 --env-file .env mrna-studio
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 _check-venv:

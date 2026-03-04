@@ -146,7 +146,7 @@ class SequenceView(param.Parameterized):
             '<span style="background:#059669;color:white;border-radius:3px;'
             'padding:2px 6px;font-size:10px;font-weight:700;">LOCAL</span>'
             if seq.source == "local" else
-            f'<span style="background:#0D9488;color:white;border-radius:3px;'
+            f'<span style="background:#0F766E;color:white;border-radius:3px;'
             f'padding:2px 6px;font-size:10px;font-weight:700;">DB: {seq.db_source}</span>'
         )
 
@@ -222,7 +222,7 @@ class SequenceView(param.Parameterized):
             )
             meta_rows = f"""
             <details style="margin-top:12px;">
-                <summary style="font-size:12px;cursor:pointer;color:#0D9488;">
+                <summary style="font-size:12px;cursor:pointer;color:#0F766E;">
                     Raw metadata ({len(seq.raw_metadata)} fields)
                 </summary>
                 <table style="margin-top:6px;border-collapse:collapse;">{rows}</table>

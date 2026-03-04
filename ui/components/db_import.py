@@ -128,11 +128,32 @@ class DatabaseImportPanel(param.Parameterized):
         )
 
         # -- PostgreSQL fields --
-        self._pg_host = pn.widgets.TextInput(name="Host", value="localhost", width=200)
-        self._pg_port = pn.widgets.IntInput(name="Port", value=5432, width=100)
-        self._pg_dbname = pn.widgets.TextInput(name="Database", value="mrna_studio", width=200)
-        self._pg_user = pn.widgets.TextInput(name="User", value="demo_user", width=200)
-        self._pg_password = pn.widgets.PasswordInput(name="Password", value="demo_pass_2024", width=200)
+        # Auto-detect Railway / standard PG env vars so deployed apps just work
+        self._pg_host = pn.widgets.TextInput(
+            name="Host",
+            value=os.environ.get("PGHOST", "localhost"),
+            width=200,
+        )
+        self._pg_port = pn.widgets.IntInput(
+            name="Port",
+            value=int(os.environ.get("PGPORT", 5432)),
+            width=100,
+        )
+        self._pg_dbname = pn.widgets.TextInput(
+            name="Database",
+            value=os.environ.get("PGDATABASE", "mrna_studio"),
+            width=200,
+        )
+        self._pg_user = pn.widgets.TextInput(
+            name="User",
+            value=os.environ.get("PGUSER", "demo_user"),
+            width=200,
+        )
+        self._pg_password = pn.widgets.PasswordInput(
+            name="Password",
+            value=os.environ.get("PGPASSWORD", ""),
+            width=200,
+        )
         self._pg_name = pn.widgets.TextInput(
             name="Connection Name",
             placeholder="demo_db",

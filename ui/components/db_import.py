@@ -136,7 +136,7 @@ class DatabaseImportPanel(param.Parameterized):
         )
         self._pg_port = pn.widgets.IntInput(
             name="Port",
-            value=int(os.environ.get("PGPORT", 5432)),
+            value=int(os.environ.get("PGPORT", None) or 5432),
             width=100,
         )
         self._pg_dbname = pn.widgets.TextInput(

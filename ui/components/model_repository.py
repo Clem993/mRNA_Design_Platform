@@ -169,21 +169,21 @@ class ModelRepositoryPanel(param.Parameterized):
         def _run_import():
             # Step 1: Connecting
             status.object = (
-                '<div style="font-size:11px;color:#0D9488;padding:4px 0;">'
+                '<div style="font-size:11px;color:#0F766E;padding:4px 0;">'
                 'Connecting to repository...</div>'
             )
             time.sleep(0.8)
 
             # Step 2: Downloading
             status.object = (
-                '<div style="font-size:11px;color:#0D9488;padding:4px 0;">'
+                '<div style="font-size:11px;color:#0F766E;padding:4px 0;">'
                 'Downloading model...</div>'
             )
             time.sleep(0.8)
 
             # Step 3: Registering
             status.object = (
-                '<div style="font-size:11px;color:#0D9488;padding:4px 0;">'
+                '<div style="font-size:11px;color:#0F766E;padding:4px 0;">'
                 'Registering model...</div>'
             )
             time.sleep(0.5)
@@ -332,6 +332,8 @@ class ModelRepositoryPanel(param.Parameterized):
 
             def on_filter(event, filter_name=f):
                 self._active_filter = filter_name
+                for b in filter_buttons:
+                    b.button_type = "primary" if b.name == filter_name else "light"
                 self._rebuild_cards()
 
             btn.on_click(on_filter)

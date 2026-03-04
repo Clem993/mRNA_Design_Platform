@@ -256,13 +256,13 @@ class PlasmidView(param.Parameterized):
                            f'... and {combo_count - 5} more combinations</div>'
 
         self._combo_count_pane.object = (
-            f'<div style="font-size:13px;font-weight:700;color:#0D9488;">'\
+            f'<div style="font-size:13px;font-weight:700;color:#0F766E;">'\
             f'{combo_count} sequences will be generated</div>'\
             f'<div style="font-size:11px;color:#64748B;">({selection_summary})</div>'
         )
 
         self._result_pane.object = (
-            f'<div style="background:#F0FDFA;border:1px solid #0D9488;border-radius:6px;'\
+            f'<div style="background:#F0FDFA;border:1px solid #0F766E;border-radius:6px;'\
             f'padding:16px;margin-top:12px;">'\
             f'<div style="font-weight:700;color:#0F766E;margin-bottom:8px;">'\
             f'Combination Preview ({combo_count} sequences)</div>'\

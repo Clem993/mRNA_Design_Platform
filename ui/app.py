@@ -3,14 +3,26 @@ mRNA Design Studio — Panel application entry point.
 
 Uses Panel's FastListTemplate which gives a proper responsive sidebar +
 main area that fits the viewport without horizontal overflow.
+
+Password protection
+-------------------
+Set the ``MRNA_STUDIO_PASSWORD`` environment variable (or add it to a
+``.env`` file) to require a password before anyone can access the app.
+Optionally set ``MRNA_STUDIO_USERS`` to a JSON object mapping usernames
+to passwords, e.g. ``{"alice": "pw1", "bob": "pw2"}``.
 """
 from __future__ import annotations
 
+import json
 import logging
+import os
 import sys
 
 import panel as pn
 import param
+from dotenv import load_dotenv
+
+load_dotenv()  # read .env if present
 
 # ── Logging configuration ─────────────────────────────────────────────────────
 logging.basicConfig(
@@ -38,9 +50,9 @@ THEME = {
     "sidebar_heading": "#0F172A",   # slate-950 heading
     "sidebar_hover":   "#F8FAFC",   # slate-50 hover
     "sidebar_active_bg": "#F0FDFA", # teal-50 selection
-    "sidebar_active_text": "#0D9488", # teal-600 on white
+    "sidebar_active_text": "#0F766E", # teal-600 on white
 
-    "accent":          "#0D9488",   # teal-600 — primary science accent
+    "accent":          "#0F766E",   # teal-700 — dark enough for white text on accent
     "accent_light":    "#14B8A6",   # teal-500
     "success":         "#059669",   # emerald-600
     "warning":         "#D97706",   # amber-600
@@ -119,6 +131,9 @@ html, body {{
     height: calc(100vh - 60px);
     overflow-x: hidden;
 }}
+#header .app-header a.title {{
+    font-size: 15px !important;
+}}
 """
 
 pn.extension(
@@ -143,6 +158,18 @@ _TAB_KEYS = ["import_db", "model_repo", "worklist", "parts", "assemble", "genera
 
 
 logger = logging.getLogger(__name__)
+
+
+# ── Logo (white DNA double-helix SVG, base64-encoded) ────────────────────────
+_DNA_LOGO = (
+    "data:image/svg+xml;base64,"
+    "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiA2"
+    "NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIuMiIgc3Ryb2tlLWxp"
+    "bmVjYXA9InJvdW5kIj48cGF0aCBkPSJNOCA0QzggMjAgMjQgMjAgMjQgMzJTOCA0NCA4IDYwIi8+"
+    "PHBhdGggZD0iTTI0IDRDMjQgMjAgOCAyMCA4IDMyUzI0IDQ0IDI0IDYwIi8+PGxpbmUgeDE9IjgiIH"
+    "kxPSIxNiIgeDI9IjI0IiB5Mj0iMTYiLz48bGluZSB4MT0iOCIgeTE9IjMyIiB4Mj0iMjQiIHkyPS"
+    "IzMiIvPjxsaW5lIHgxPSI4IiB5MT0iNDgiIHgyPSIyNCIgeTI9IjQ4Ii8+PC9zdmc+Cg=="
+)
 
 
 class StudioApp(param.Parameterized):
@@ -202,6 +229,7 @@ class StudioApp(param.Parameterized):
     def build_template(self) -> pn.template.FastListTemplate:
         template = pn.template.FastListTemplate(
             title="mRNA Design Studio",
+            logo=_DNA_LOGO,
             sidebar=[pn.panel(self._sidebar_comp.panel)],
             sidebar_width=250,
             header_background="#0F172A",
@@ -220,15 +248,57 @@ def create_app() -> pn.template.FastListTemplate:
     return StudioApp().build_template()
 
 
+def _get_auth_config() -> dict:
+    """Build Panel basic-auth config from environment variables.
+
+    Priority:
+      1. ``MRNA_STUDIO_USERS`` — JSON ``{"user": "pass", …}``
+      2. ``MRNA_STUDIO_PASSWORD`` — single shared password (username can
+         be anything)
+      3. Neither set → no auth (open access)
+    """
+    users_json = os.environ.get("MRNA_STUDIO_USERS", "").strip()
+    if users_json:
+        try:
+            return json.loads(users_json)
+        except json.JSONDecodeError:
+            logger.warning("MRNA_STUDIO_USERS is not valid JSON — falling back")
+
+    password = os.environ.get("MRNA_STUDIO_PASSWORD", "").strip()
+    if password:
+        # Panel accepts a plain string as "any-username + this password"
+        return password
+
+    return {}
+
+
 def main() -> None:
-    pn.serve(
-        create_app,
-        port=5007,
-        autoreload=True,
+    port = int(os.environ.get("PORT", 5007))          # Railway/Render set $PORT
+    host = os.environ.get("HOST", "0.0.0.0")           # bind to all interfaces in containers
+    auth = _get_auth_config()
+
+    serve_kwargs: dict = dict(
+        port=port,
+        address=host,
+        autoreload=os.environ.get("MRNA_STUDIO_RELOAD", "0") == "1",
         title="mRNA Design Studio",
-        show=True,
+        show=False,                                     # no browser in prod
         websocket_origin="*",
+        allow_websocket_origin=["*"],
     )
+
+    if auth:
+        serve_kwargs["basic_auth"] = auth
+        serve_kwargs["cookie_secret"] = os.environ.get(
+            "MRNA_STUDIO_COOKIE_SECRET", "mrna-studio-change-me"
+        )
+        logger.info("Password protection enabled")
+    else:
+        logger.warning(
+            "No MRNA_STUDIO_PASSWORD or MRNA_STUDIO_USERS set — app is OPEN"
+        )
+
+    pn.serve(create_app, **serve_kwargs)
 
 
 if __name__ == "__main__":

@@ -68,6 +68,12 @@ class DatabaseImportPanel(param.Parameterized):
             value="CSV / Excel",
             button_type="primary",
             button_style="outline",
+            stylesheets=["""
+                :host(.outline) .bk-btn-group .bk-btn-primary.bk-active,
+                :host(.outline) .bk-btn.bk-btn-primary.bk-active {
+                    color: #FFFFFF !important;
+                }
+            """],
         )
 
         return pn.Column(

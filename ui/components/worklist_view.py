@@ -144,8 +144,8 @@ class WorklistView(param.Parameterized):
             stylesheets=["""
                 :host .bk-btn {
                     font-size: 11px;
-                    color: #0D9488;
-                    border: 1px solid #0D9488;
+                    color: #0F766E;
+                    border: 1px solid #0F766E;
                     border-radius: 4px;
                 }
                 :host .bk-btn:hover {

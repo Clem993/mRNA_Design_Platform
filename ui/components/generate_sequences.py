@@ -190,7 +190,7 @@ class GenerateSequencesPanel(param.Parameterized):
                     'Imported Generative Models</div>'
                     '<div style="font-size:12px;color:#94A3B8;margin-bottom:8px;">'
                     'No generative models imported. Use the '
-                    '<span style="color:#0D9488;font-weight:600;">Model Repository</span> '
+                    '<span style="color:#0F766E;font-weight:600;">Model Repository</span> '
                     'tab to import models.</div>'
                 ),
                 sizing_mode="stretch_width",
@@ -404,7 +404,7 @@ class GenerateSequencesPanel(param.Parameterized):
 
         model = model_reg.model
         self._output_pane.append(pn.pane.HTML(
-            f'<div style="font-size:12px;color:#0D9488;margin-bottom:8px;">'
+            f'<div style="font-size:12px;color:#0F766E;margin-bottom:8px;">'
             f'Running {model.name}...</div>'
         ))
 

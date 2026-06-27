@@ -236,7 +236,7 @@ class StudioApp(param.Parameterized):
 
     def build_template(self) -> pn.template.FastListTemplate:
         template = pn.template.FastListTemplate(
-            title="mRNA Design Studio",
+            title="mRNA Data Management Platform",
             logo=_DNA_LOGO,
             sidebar=[pn.panel(self._sidebar_comp.panel)],
             sidebar_width=250,
@@ -289,7 +289,7 @@ def main() -> None:
         port=port,
         address=host,
         autoreload=os.environ.get("MRNA_STUDIO_RELOAD", "0") == "1",
-        title="mRNA Design Studio",
+        title="mRNA Data Management Platform",
         show=False,                                     # no browser in prod
         websocket_origin="*",
         allow_websocket_origin=["*"],

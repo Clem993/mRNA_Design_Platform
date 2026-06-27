@@ -40,7 +40,7 @@ from ui.components.plasmid_view import PlasmidView
 from ui.components.model_repository import ModelRepositoryPanel
 from ui.components.plasmid_assembly import PlasmidAssemblyPanel
 from ui.components.generate_sequences import GenerateSequencesPanel
-from ui.components.cluster_view import ClusterView
+from ui.components.candidate_view import CandidateView
 from ui.components.experiment_view import ExperimentView
 
 
@@ -152,13 +152,13 @@ _TAB_NAMES = [
     "Import Data",
     "Model Repository",
     "Worklist",
-    "Cluster & Tree",
+    "Candidate Analysis",
     "Experiments",
     "Parts Workshop",
     "Assemble Plasmid",
     "Generate Sequences",
 ]
-_TAB_KEYS = ["import_db", "model_repo", "worklist", "clusters", "experiments", "parts", "assemble", "generate"]
+_TAB_KEYS = ["import_db", "model_repo", "worklist", "candidates", "experiments", "parts", "assemble", "generate"]
 
 
 logger = logging.getLogger(__name__)
@@ -189,7 +189,7 @@ class StudioApp(param.Parameterized):
         self._model_repo    = ModelRepositoryPanel(self.state)
         self._assembly      = PlasmidAssemblyPanel(self.state)
         self._generate      = GenerateSequencesPanel(self.state)
-        self._cluster       = ClusterView(self.state)
+        self._candidates    = CandidateView(self.state)
         self._experiments   = ExperimentView(self.state)
 
         # ── Build persistent widgets once ─────────────────────────────────────
@@ -206,7 +206,7 @@ class StudioApp(param.Parameterized):
                 pn.panel(self._worklist.panel),
                 sizing_mode="stretch_width",
             )),
-            (_TAB_NAMES[3], pn.panel(self._cluster.panel)),
+            (_TAB_NAMES[3], pn.panel(self._candidates.panel)),
             (_TAB_NAMES[4], pn.panel(self._experiments.panel)),
             (_TAB_NAMES[5], pn.panel(self._parts.panel)),
             (_TAB_NAMES[6], pn.panel(self._assembly.panel)),

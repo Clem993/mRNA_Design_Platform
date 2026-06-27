@@ -27,6 +27,9 @@ from core.analysis.restriction_sites import (
 )
 from core.analysis.kozak import check_kozak, KozakResult
 from core.analysis.structure import predict_structure, StructureResult
+from core.analysis.uridine import analyze_uridine, UridineReport
+from core.analysis.motifs import scan_motifs, MotifHit
+from core.analysis.liability import assess_liabilities, LiabilityReport
 
 
 @dataclass
@@ -68,6 +71,15 @@ class AnalysisReport:
     # Secondary structure (ViennaRNA)
     structure: Optional[StructureResult] = None
 
+    # Uridine content (immunogenicity proxy)
+    uridine: Optional[UridineReport] = None
+
+    # Sequence-liability motifs (uORF, premature polyA, ARE, splice donor)
+    motif_hits: List[MotifHit] = field(default_factory=list)
+
+    # Aggregated liability / QC assessment
+    liability: Optional[LiabilityReport] = None
+
     # Errors / warnings generated during analysis
     warnings: List[str] = field(default_factory=list)
 
@@ -92,6 +104,12 @@ class AnalysisReport:
             "kozak_score": self.kozak.score if self.kozak else None,
             "kozak_strength": self.kozak.strength if self.kozak else None,
             "mfe": self.structure.mfe if self.structure else None,
+            "uridine_percent": self.uridine.u_percent if self.uridine else None,
+            "liability_score": self.liability.score if self.liability else None,
+            "liability_verdict": self.liability.verdict if self.liability else None,
+            "liability_critical": self.liability.n_critical if self.liability else None,
+            "liability_warning": self.liability.n_warning if self.liability else None,
+            "liability_flag_count": self.liability.flag_count if self.liability else None,
             "warnings": self.warnings,
         }
 
@@ -269,7 +287,21 @@ class SequenceAnalyzer:
             struct_data = self.analyze_structure(full_seq)
             report.structure = struct_data["structure"]
 
+        # Uridine content (immunogenicity proxy)
+        report.uridine = analyze_uridine(full_seq)
+
+        # Sequence-liability motifs (region-aware when components are available)
+        report.motif_hits = scan_motifs(
+            five_prime_utr=seq.five_prime_utr,
+            cds=seq.cds,
+            three_prime_utr=seq.three_prime_utr,
+            full_seq=full_seq,
+        )
+
         report.warnings = warnings
+
+        # Aggregate everything into the liability / QC assessment
+        report.liability = assess_liabilities(report, seq)
 
         # Cache result
         seq._analysis_cache[cache_key] = report

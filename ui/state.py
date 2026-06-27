@@ -21,6 +21,7 @@ from core.models.worklist import Worklist
 from core.models.parts import SequencePart
 from core.database.base import DatabaseConnector, SchemaMapper
 from models.base import ModelRegistry
+from models.runs import RunHistory
 
 
 class AppState(param.Parameterized):
@@ -68,6 +69,12 @@ class AppState(param.Parameterized):
         instantiate=True,
     )
 
+    # ── Experiment / run history (model lifecycle) ─────────────────────────────
+    run_history: RunHistory = param.ClassSelector(
+        class_=RunHistory, default=None, allow_None=False,
+        instantiate=True,
+    )
+
     # ── Plasmid backbones ─────────────────────────────────────────────────────
     backbone_library: List[PlasmidBackbone] = param.List(
         default=[], doc="Available plasmid backbones"
@@ -97,6 +104,8 @@ class AppState(param.Parameterized):
             params["worklist"] = Worklist()
         if "model_registry" not in params:
             params["model_registry"] = ModelRegistry()
+        if "run_history" not in params:
+            params["run_history"] = RunHistory()
         super().__init__(**params)
 
         # Load seed parts library if parts_library is empty

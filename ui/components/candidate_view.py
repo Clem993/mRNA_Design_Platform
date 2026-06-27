@@ -194,8 +194,54 @@ class CandidateView(param.Parameterized):
         return pn.Column(
             pn.pane.Plotly(fig, sizing_mode="stretch_width"),
             render_liability_panel(report),
+            self._codon_panel(seq),
             sizing_mode="stretch_width",
         )
+
+    def _codon_panel(self, seq) -> pn.viewable.Viewable:
+        """Codon-optimization analysis: %MinMax profile + rare codons + optimize projection."""
+        if not seq.cds:
+            return pn.pane.HTML(
+                '<div style="color:#64748B;font-size:12px;margin-top:10px;">'
+                'No CDS available for codon analysis.</div>')
+        from core.analysis.codon_analysis import analyze_codons
+        ca = analyze_codons(seq.cds, organism="human")
+
+        fig = go.Figure()
+        if ca.minmax_positions:
+            fig.add_trace(go.Scatter(
+                x=ca.minmax_positions, y=ca.minmax_values, mode="lines",
+                line={"color": "#0F766E", "width": 1.4}, fill="tozeroy",
+                fillcolor="rgba(15,118,110,0.10)", name="%MinMax",
+                hovertemplate="codon %{x}<br>%MinMax %{y:.0f}<extra></extra>"))
+        fig.add_hline(y=0, line_color="#94A3B8", opacity=0.6)
+        for (s, e) in ca.rare_clusters:
+            fig.add_vrect(x0=s, x1=e, fillcolor="#DC2626", opacity=0.12, line_width=0)
+        fig.update_layout(
+            title={"text": "Codon usage (%MinMax: + common / − rare)", "font": {"size": 13}},
+            xaxis_title="codon position", yaxis_title="%MinMax",
+            height=260, margin={"l": 55, "r": 20, "t": 40, "b": 40},
+            plot_bgcolor="#F8FAFC", paper_bgcolor="white", showlegend=False)
+
+        cai_str = f"{ca.cai:.3f}" if ca.cai is not None else "—"
+        proj = ""
+        if ca.optimized_cai is not None:
+            d = ca.optimized_cai - (ca.cai or 0)
+            proj = (
+                f'<div style="font-size:12px;color:#475569;margin-top:6px;">'
+                f'If codon-optimized for human: CAI <b>{cai_str} → {ca.optimized_cai:.3f}</b> '
+                f'(<span style="color:{"#059669" if d>=0 else "#DC2626"};">{d:+.3f}</span>), '
+                f'rare codons <b>{ca.rare_count} → {ca.optimized_rare_count}</b>, '
+                f'{ca.codons_changed} codon(s) changed.</div>'
+            )
+        summary = pn.pane.HTML(
+            f'<div style="font-size:12px;color:#334155;margin-top:8px;">'
+            f'<b>CAI</b> {cai_str} · <b>{ca.rare_count}</b> rare codons '
+            f'({ca.rare_fraction*100:.0f}%) · <b>{len(ca.rare_clusters)}</b> rare cluster(s) '
+            f'over {ca.n_codons} codons.</div>{proj}'
+        )
+        return pn.Column(summary, pn.pane.Plotly(fig, sizing_mode="stretch_width"),
+                         sizing_mode="stretch_width")
 
     # ── panel ─────────────────────────────────────────────────────────────────
     @param.depends("_state.worklist")

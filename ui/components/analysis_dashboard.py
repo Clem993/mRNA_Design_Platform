@@ -181,6 +181,115 @@ def _structure_card(report: AnalysisReport) -> pn.pane.HTML:
     """)
 
 
+def _uridine_card(report: AnalysisReport) -> pn.pane.HTML:
+    u = report.uridine
+    if u is None:
+        return pn.pane.HTML('<div style="color:#64748B;font-size:12px;">No uridine data.</div>')
+    color = "#059669" if u.u_percent < 35 else "#D97706" if u.u_percent < 45 else "#DC2626"
+    stretches = len(u.high_u_stretches)
+    return pn.pane.HTML(f"""
+        <div>
+            <span style="font-size:18px;font-weight:700;color:{color};">{u.u_percent:.1f}%</span>
+            <span style="font-size:11px;color:#64748B;margin-left:6px;">uridine</span>
+        </div>
+        <div style="font-size:11px;color:#64748B;margin-top:4px;">
+            {stretches} high-U stretch(es) · U/A ratio {u.ua_ratio:.2f}</div>
+        <div style="font-size:10px;color:#94A3B8;margin-top:3px;">
+            High U is immunostimulatory — modified nucleotides mitigate it.</div>
+    """)
+
+
+def _motif_card(report: AnalysisReport) -> pn.pane.HTML:
+    hits = report.motif_hits
+    if not hits:
+        return pn.pane.HTML(
+            '<div style="color:#059669;font-size:12px;">No liability motifs detected.</div>'
+        )
+    sev_color = {"critical": "#DC2626", "warning": "#D97706", "info": "#64748B"}
+    rows = ""
+    for h in hits[:12]:
+        c = sev_color.get(h.severity, "#64748B")
+        rows += (
+            f'<div style="display:flex;gap:8px;align-items:baseline;margin-bottom:3px;">'
+            f'<span style="background:{c};color:white;border-radius:3px;padding:1px 5px;'
+            f'font-size:9px;text-transform:uppercase;">{h.severity}</span>'
+            f'<span style="font-size:12px;">{h.label}</span>'
+            f'<span style="font-size:10px;color:#94A3B8;font-family:monospace;">'
+            f'{h.region}:{h.start}</span></div>'
+        )
+    more = f'<div style="font-size:10px;color:#94A3B8;">+{len(hits)-12} more</div>' if len(hits) > 12 else ""
+    return pn.pane.HTML(rows + more)
+
+
+_VERDICT_STYLE = {
+    "pass":   ("#059669", "PASS"),
+    "review": ("#D97706", "REVIEW"),
+    "fail":   ("#DC2626", "FAIL"),
+}
+_SEV_STYLE = {
+    "critical": ("#DC2626", "Critical"),
+    "warning":  ("#D97706", "Warning"),
+    "info":     ("#64748B", "Info"),
+}
+
+
+def render_liability_panel(report: AnalysisReport) -> pn.pane.HTML:
+    """Reusable liability / QC scorecard + ranked flag list (pure HTML)."""
+    lia = getattr(report, "liability", None)
+    if lia is None:
+        return pn.pane.HTML('<div style="color:#64748B;font-size:12px;">No liability assessment.</div>')
+
+    vcolor, vlabel = _VERDICT_STYLE.get(lia.verdict, ("#64748B", lia.verdict.upper()))
+    score_color = "#059669" if lia.score >= 85 else "#D97706" if lia.score >= 60 else "#DC2626"
+
+    counts = (
+        f'<span style="color:#DC2626;font-weight:700;">{lia.n_critical}</span> critical · '
+        f'<span style="color:#D97706;font-weight:700;">{lia.n_warning}</span> warning · '
+        f'<span style="color:#64748B;font-weight:700;">{lia.n_info}</span> info'
+    )
+
+    if not lia.flags:
+        flag_html = (
+            '<div style="color:#059669;font-size:12px;padding:6px 0;">'
+            f'No liabilities flagged across {lia.checks_run} checks.</div>'
+        )
+    else:
+        items = ""
+        for f in lia.sorted_flags():
+            sc, sl = _SEV_STYLE.get(f.severity, ("#64748B", f.severity.title()))
+            loc = f'<span style="font-family:monospace;color:#94A3B8;font-size:10px;margin-left:6px;">{f.location}</span>' if f.location else ""
+            rec = f'<div style="font-size:11px;color:#64748B;margin-top:2px;">↳ {f.recommendation}</div>' if f.recommendation else ""
+            items += f"""
+            <div style="border-left:3px solid {sc};padding:6px 0 6px 10px;margin-bottom:8px;">
+                <div style="display:flex;align-items:baseline;gap:8px;">
+                    <span style="background:{sc};color:white;border-radius:3px;padding:1px 6px;
+                                 font-size:9px;text-transform:uppercase;font-weight:700;">{sl}</span>
+                    <span style="font-size:13px;font-weight:600;color:#0F172A;">{f.title}</span>
+                    {loc}
+                </div>
+                <div style="font-size:12px;color:#334155;margin-top:2px;">{f.detail}</div>
+                {rec}
+            </div>"""
+        flag_html = items
+
+    return pn.pane.HTML(f"""
+    <div style="border:1px solid #CBD5E1;border-radius:8px;padding:14px 16px;background:white;">
+        <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+                    border-bottom:1px solid #E2E8F0;padding-bottom:10px;margin-bottom:10px;">
+            <div>
+                <div style="font-size:10px;color:#64748B;letter-spacing:.05em;">QC SCORE</div>
+                <div style="font-size:30px;font-weight:800;color:{score_color};line-height:1;">{lia.score}</div>
+            </div>
+            <div style="background:{vcolor};color:white;border-radius:6px;padding:6px 14px;
+                        font-size:14px;font-weight:800;letter-spacing:.05em;">{vlabel}</div>
+            <div style="font-size:12px;color:#475569;">{counts}</div>
+            <div style="font-size:11px;color:#94A3B8;margin-left:auto;">{lia.checks_run} checks</div>
+        </div>
+        {flag_html}
+    </div>
+    """)
+
+
 def _metric_panel(title: str, content: pn.viewable.Viewable) -> pn.Column:
     return pn.Column(
         pn.pane.HTML(
@@ -266,6 +375,11 @@ class AnalysisDashboard(param.Parameterized):
             ),
             pn.pane.HTML(warnings_html) if warnings_html else pn.pane.HTML(""),
             pn.pane.HTML(summary_html),
+            pn.pane.HTML(
+                '<div style="font-size:13px;font-weight:700;color:#0F172A;'
+                'margin:6px 0 6px 0;">Liability / QC assessment</div>'
+            ),
+            render_liability_panel(report),
             pn.layout.Divider(),
             _gc_plot(report),
             pn.GridBox(
@@ -274,6 +388,8 @@ class AnalysisDashboard(param.Parameterized):
                 _metric_panel("Kozak Context", _kozak_card(report)),
                 _metric_panel("Homopolymers", _homopolymer_card(report)),
                 _metric_panel("Restriction Sites", _restriction_card(report)),
+                _metric_panel("Uridine Content", _uridine_card(report)),
+                _metric_panel("Liability Motifs", _motif_card(report)),
                 _metric_panel("Secondary Structure (MFE)", _structure_card(report)),
                 ncols=2,
                 sizing_mode="stretch_width",

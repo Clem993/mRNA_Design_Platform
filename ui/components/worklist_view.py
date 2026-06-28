@@ -55,11 +55,17 @@ class WorklistView(param.Parameterized):
                 row["CAI"] = f"{base.get('cai', 0):.3f}" if base.get('cai') else "—"
                 row["Homopolymers"] = base.get('homopolymer_count', 0)
                 row["Restriction Sites"] = base.get('restriction_site_count', 0)
+                verdict = base.get('liability_verdict')
+                score = base.get('liability_score')
+                row["QC"] = f"{verdict.title()} · {score}" if verdict is not None else "—"
+                row["Liabilities"] = base.get('liability_flag_count', 0) if base.get('liability_flag_count') is not None else "—"
             else:
                 row["GC%"] = "—"
                 row["CAI"] = "—"
                 row["Homopolymers"] = "—"
                 row["Restriction Sites"] = "—"
+                row["QC"] = "—"
+                row["Liabilities"] = "—"
 
             # Add model score columns from analyses
             for analysis_name, analysis_data in item.analyses.items():
@@ -262,9 +268,38 @@ class WorklistView(param.Parameterized):
             self._create_wl_section,
             pn.pane.HTML(f'<div style="margin-bottom:8px;">{origin_chips}</div>') if origin_chips else pn.pane.HTML(""),
             table_or_empty,
+            self._liability_detail,
             sizing_mode="stretch_width",
             styles={"padding": "8px 16px"},
         )
+
+    @param.depends("_state.active_sequence")
+    def _liability_detail(self) -> pn.viewable.Viewable:
+        """Liability / QC breakdown for the currently selected sequence."""
+        seq = self._state.active_sequence
+        if seq is None:
+            return pn.pane.HTML(
+                '<div style="color:#94A3B8;font-size:12px;padding:10px 2px;">'
+                'Click a row to see its liability / QC breakdown.</div>'
+            )
+        try:
+            from core.analysis.analyzer import SequenceAnalyzer
+            from ui.components.analysis_dashboard import render_liability_panel
+
+            report = SequenceAnalyzer().run_full_analysis(seq)
+            return pn.Column(
+                pn.pane.HTML(
+                    f'<div style="font-size:13px;font-weight:700;margin:10px 0 6px 0;">'
+                    f'Liabilities — {seq.name}</div>'
+                ),
+                render_liability_panel(report),
+                sizing_mode="stretch_width",
+            )
+        except Exception as e:  # noqa: BLE001 — surface any analysis error inline
+            return pn.pane.HTML(
+                f'<div style="color:#DC2626;font-size:12px;padding:8px 0;">'
+                f'Liability analysis error: {e}</div>'
+            )
 
     def _create_worklist_from_selection(self, name: str, selection: List[int], df: pd.DataFrame) -> None:
         """Create a new worklist from selected rows."""
@@ -380,7 +415,41 @@ class WorklistView(param.Parameterized):
                 item.status = "error"
                 item.notes = f"{model_name}: {str(e)}"
 
+        # Record this scoring run for experiment / version tracking
+        self._record_run(model_reg)
+
         self._state.param.trigger("worklist")
         self._state.set_status(
             f"{model_name} complete: {analyzed_count} scored, {skipped_count} skipped (already scored)"
         )
+
+    def _record_run(self, model_reg: object) -> None:
+        """Capture a ModelRun snapshot of the current scores for this model."""
+        from datetime import datetime
+        from models.runs import summarize_run
+
+        name = model_reg.model.name
+        # gather all current scores for this model across the worklist
+        scores = {}
+        for item in self._state.worklist.items:
+            data = item.analyses.get(name)
+            if isinstance(data, dict) and "score" in data:
+                scores[item.sequence.id] = data["score"]
+        if not scores:
+            return
+
+        try:
+            version = model_reg.model.version
+        except Exception:
+            version = "1.0"
+
+        run = summarize_run(
+            model_name=name,
+            model_version=str(version),
+            model_source=getattr(model_reg, "source", ""),
+            worklist_name=self._state.worklist.name,
+            scores=scores,
+            timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        )
+        self._state.run_history.add(run)
+        self._state.param.trigger("run_history")

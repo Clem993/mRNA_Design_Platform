@@ -40,6 +40,8 @@ from ui.components.plasmid_view import PlasmidView
 from ui.components.model_repository import ModelRepositoryPanel
 from ui.components.plasmid_assembly import PlasmidAssemblyPanel
 from ui.components.generate_sequences import GenerateSequencesPanel
+from ui.components.candidate_view import CandidateView
+from ui.components.experiment_view import ExperimentView
 
 
 # ── Design tokens ─────────────────────────────────────────────────────────────
@@ -150,11 +152,13 @@ _TAB_NAMES = [
     "Import Data",
     "Model Repository",
     "Worklist",
+    "Candidate Analysis",
+    "Experiments",
     "Parts Workshop",
     "Assemble Plasmid",
     "Generate Sequences",
 ]
-_TAB_KEYS = ["import_db", "model_repo", "worklist", "parts", "assemble", "generate"]
+_TAB_KEYS = ["import_db", "model_repo", "worklist", "candidates", "experiments", "parts", "assemble", "generate"]
 
 
 logger = logging.getLogger(__name__)
@@ -185,6 +189,8 @@ class StudioApp(param.Parameterized):
         self._model_repo    = ModelRepositoryPanel(self.state)
         self._assembly      = PlasmidAssemblyPanel(self.state)
         self._generate      = GenerateSequencesPanel(self.state)
+        self._candidates    = CandidateView(self.state)
+        self._experiments   = ExperimentView(self.state)
 
         # ── Build persistent widgets once ─────────────────────────────────────
         self._tabs = pn.Tabs(
@@ -200,9 +206,11 @@ class StudioApp(param.Parameterized):
                 pn.panel(self._worklist.panel),
                 sizing_mode="stretch_width",
             )),
-            (_TAB_NAMES[3], pn.panel(self._parts.panel)),
-            (_TAB_NAMES[4], pn.panel(self._assembly.panel)),
-            (_TAB_NAMES[5], pn.panel(self._generate.panel)),
+            (_TAB_NAMES[3], pn.panel(self._candidates.panel)),
+            (_TAB_NAMES[4], pn.panel(self._experiments.panel)),
+            (_TAB_NAMES[5], pn.panel(self._parts.panel)),
+            (_TAB_NAMES[6], pn.panel(self._assembly.panel)),
+            (_TAB_NAMES[7], pn.panel(self._generate.panel)),
             active=0,
             sizing_mode="stretch_width",
         )
@@ -228,7 +236,7 @@ class StudioApp(param.Parameterized):
 
     def build_template(self) -> pn.template.FastListTemplate:
         template = pn.template.FastListTemplate(
-            title="mRNA Design Studio",
+            title="mRNA Data Management Platform",
             logo=_DNA_LOGO,
             sidebar=[pn.panel(self._sidebar_comp.panel)],
             sidebar_width=250,
@@ -281,7 +289,7 @@ def main() -> None:
         port=port,
         address=host,
         autoreload=os.environ.get("MRNA_STUDIO_RELOAD", "0") == "1",
-        title="mRNA Design Studio",
+        title="mRNA Data Management Platform",
         show=False,                                     # no browser in prod
         websocket_origin="*",
         allow_websocket_origin=["*"],

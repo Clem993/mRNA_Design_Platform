@@ -89,6 +89,10 @@ Layered, with a strict separation between a pure domain core and the UI:
 | **Assemble Plasmid** | Pick a backbone & cloning strategy, run QC, export the assembled construct. |
 | **Generate Sequences** | Produce codon-optimized variants from configurable settings. |
 
+![Import Data — load sequences from CSV/Excel or PostgreSQL; columns auto-map to the structured mRNA model.](images/import-data.jpg){width=6.5in}
+
+![Worklist — the imported panel with base analysis run: GC%, CAI, homopolymers, restriction sites, and the QC score / liabilities count per candidate.](images/worklist-qc.jpg){width=6.5in}
+
 ---
 
 ## 4. The analysis engine
@@ -137,6 +141,8 @@ Output: an `AnalysisReport` dataclass holding every result + a `to_dict()` for t
 Surfaced as a scorecard (analysis dashboard / candidate inspect) and as **QC** + **Liabilities**
 columns in the worklist.
 
+![Per-sequence liability breakdown — a 0–100 QC score, a pass/review/fail verdict, severity counts, and each flag with its location and recommendation.](images/liability-breakdown.jpg){width=6.5in}
+
 ---
 
 ## 6. Candidate objective scoring
@@ -155,6 +161,8 @@ four objectives mRNA designers trade off, each **0–100, higher is better**. Th
 
 All scores clamp to 0–100; missing metrics fall back to neutral defaults. The Candidate
 Analysis tab ranks by Overall, colour-codes by band, and shortlists the top N.
+
+![Candidate Analysis — the comparison scorecard ranking every candidate across the four objectives, with the top-N shortlist (★) and a per-candidate sequence/structure map below.](images/candidate-analysis.jpg){width=6.5in}
 
 ---
 
